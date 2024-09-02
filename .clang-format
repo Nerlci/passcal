@@ -1,0 +1,13 @@
+{
+    BasedOnStyle: WebKit, 
+    AllowShortFunctionsOnASingleLine: true,
+    BreakBeforeBraces: Custom,
+    BraceWrapping: {
+        AfterEnum: true
+    }, 
+    AllowShortCaseLabelsOnASingleLine: true, 
+    AllowShortBlocksOnASingleLine: true, 
+    AllowShortIfStatementsOnASingleLine: true, 
+    AllowShortLoopsOnASingleLine: true, 
+    IndentWidth: 4
+}

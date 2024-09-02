@@ -19,35 +19,35 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitProgram_head(PascalSParser::Program_headContext *ctx) override {
+  virtual std::any visitProgramHead(PascalSParser::ProgramHeadContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitProgram_body(PascalSParser::Program_bodyContext *ctx) override {
+  virtual std::any visitProgramBody(PascalSParser::ProgramBodyContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitIdentifier_list(PascalSParser::Identifier_listContext *ctx) override {
+  virtual std::any visitIdentifierList(PascalSParser::IdentifierListContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitConst_declarations(PascalSParser::Const_declarationsContext *ctx) override {
+  virtual std::any visitConstDeclarations(PascalSParser::ConstDeclarationsContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitConst_declaration(PascalSParser::Const_declarationContext *ctx) override {
+  virtual std::any visitConstDeclaration(PascalSParser::ConstDeclarationContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitConst_variable(PascalSParser::Const_variableContext *ctx) override {
+  virtual std::any visitConstVariable(PascalSParser::ConstVariableContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitType_declarations(PascalSParser::Type_declarationsContext *ctx) override {
+  virtual std::any visitTypeDeclarations(PascalSParser::TypeDeclarationsContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitType_declaration(PascalSParser::Type_declarationContext *ctx) override {
+  virtual std::any visitTypeDeclaration(PascalSParser::TypeDeclarationContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -55,11 +55,11 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitStandard_type(PascalSParser::Standard_typeContext *ctx) override {
+  virtual std::any visitStandardType(PascalSParser::StandardTypeContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitRecord_body(PascalSParser::Record_bodyContext *ctx) override {
+  virtual std::any visitRecordBody(PascalSParser::RecordBodyContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -71,55 +71,87 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitVar_declarations(PascalSParser::Var_declarationsContext *ctx) override {
+  virtual std::any visitVarDeclarations(PascalSParser::VarDeclarationsContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitVar_declaration(PascalSParser::Var_declarationContext *ctx) override {
+  virtual std::any visitVarDeclaration(PascalSParser::VarDeclarationContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitSubprogram_declarations(PascalSParser::Subprogram_declarationsContext *ctx) override {
+  virtual std::any visitSubprogramDeclarations(PascalSParser::SubprogramDeclarationsContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitSubprogram_declaration(PascalSParser::Subprogram_declarationContext *ctx) override {
+  virtual std::any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitSubprogram_head(PascalSParser::Subprogram_headContext *ctx) override {
+  virtual std::any visitSubprogramHead(PascalSParser::SubprogramHeadContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitFormal_parameter(PascalSParser::Formal_parameterContext *ctx) override {
+  virtual std::any visitFormalParameter(PascalSParser::FormalParameterContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitParameter_lists(PascalSParser::Parameter_listsContext *ctx) override {
+  virtual std::any visitParameterLists(PascalSParser::ParameterListsContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitParameter_list(PascalSParser::Parameter_listContext *ctx) override {
+  virtual std::any visitParameterList(PascalSParser::ParameterListContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitVar_parameter(PascalSParser::Var_parameterContext *ctx) override {
+  virtual std::any visitVarParameter(PascalSParser::VarParameterContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitValue_parameter(PascalSParser::Value_parameterContext *ctx) override {
+  virtual std::any visitValueParameter(PascalSParser::ValueParameterContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitCompound_statement(PascalSParser::Compound_statementContext *ctx) override {
+  virtual std::any visitCompoundStatement(PascalSParser::CompoundStatementContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitStatement_list(PascalSParser::Statement_listContext *ctx) override {
+  virtual std::any visitStatementList(PascalSParser::StatementListContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitStatement(PascalSParser::StatementContext *ctx) override {
+  virtual std::any visitAssignmentStatement(PascalSParser::AssignmentStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitStatementCallProcedureStatement(PascalSParser::StatementCallProcedureStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitStatementCompoundStatement(PascalSParser::StatementCompoundStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitIfStatement(PascalSParser::IfStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitCaseStatement(PascalSParser::CaseStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitWhileStatement(PascalSParser::WhileStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitRepeatStatement(PascalSParser::RepeatStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitForStatement(PascalSParser::ForStatementContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
+  virtual std::any visitEmptyStatement(PascalSParser::EmptyStatementContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -127,23 +159,23 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitId_varparts(PascalSParser::Id_varpartsContext *ctx) override {
+  virtual std::any visitIdVarparts(PascalSParser::IdVarpartsContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitId_varpart(PascalSParser::Id_varpartContext *ctx) override {
+  virtual std::any visitIdVarpart(PascalSParser::IdVarpartContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitElse_part(PascalSParser::Else_partContext *ctx) override {
+  virtual std::any visitElsePart(PascalSParser::ElsePartContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitCase_body(PascalSParser::Case_bodyContext *ctx) override {
+  virtual std::any visitCaseBody(PascalSParser::CaseBodyContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitBranch_list(PascalSParser::Branch_listContext *ctx) override {
+  virtual std::any visitBranchList(PascalSParser::BranchListContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -151,7 +183,7 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitConst_list(PascalSParser::Const_listContext *ctx) override {
+  virtual std::any visitConstList(PascalSParser::ConstListContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -159,11 +191,11 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitCall_procedure_statement(PascalSParser::Call_procedure_statementContext *ctx) override {
+  virtual std::any visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitExpression_list(PascalSParser::Expression_listContext *ctx) override {
+  virtual std::any visitExpressionList(PascalSParser::ExpressionListContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -171,7 +203,7 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitSimple_expression(PascalSParser::Simple_expressionContext *ctx) override {
+  virtual std::any visitSimpleExpression(PascalSParser::SimpleExpressionContext *ctx) override {
     return visitChildren(ctx);
   }
 
@@ -179,11 +211,15 @@ public:
     return visitChildren(ctx);
   }
 
+  virtual std::any visitBoolean(PascalSParser::BooleanContext *ctx) override {
+    return visitChildren(ctx);
+  }
+
   virtual std::any visitFactor(PascalSParser::FactorContext *ctx) override {
     return visitChildren(ctx);
   }
 
-  virtual std::any visitUnsign_const_variable(PascalSParser::Unsign_const_variableContext *ctx) override {
+  virtual std::any visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext *ctx) override {
     return visitChildren(ctx);
   }
 

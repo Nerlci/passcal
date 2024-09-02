@@ -1,231 +1,134 @@
 grammar PascalS;
+import PascalSLexerRules;
 
-program: program_head program_body '.';
+program: programHead programBody DOT;
 
-program_head: PROGRAM ID '(' identifier_list ')' ';';
+programHead: PROGRAM ID LPAREN identifierList RPAREN SEMICOLON;
 
-program_body:
-	const_declarations type_declarations var_declarations subprogram_declarations compound_statement
-		;
+programBody:
+	constDeclarations typeDeclarations varDeclarations subprogramDeclarations compoundStatement;
 
-identifier_list: identifier_list ',' ID | ID;
+identifierList: identifierList COMMA ID | ID;
 
-const_declarations: CONST const_declaration ';' |;
+constDeclarations: CONST constDeclaration SEMICOLON |;
 
-const_declaration:
-	const_declaration ';' ID EQUAL const_variable
-	| ID EQUAL const_variable;
+constDeclaration:
+	constDeclaration SEMICOLON ID EQUAL constVariable
+	| ID EQUAL constVariable;
 
-const_variable:
+constVariable:
 	PLUS ID
 	| MINUS ID
 	| ID
 	| PLUS NUM
 	| MINUS NUM
 	| NUM
-	| '\'' LETTER '\'';
+	| QUOTE LETTER QUOTE;
 
-type_declarations: TYPE type_declaration ';' |;
+typeDeclarations: TYPE typeDeclaration SEMICOLON |;
 
-type_declaration:
-	type_declaration ';' ID EQUAL type
+typeDeclaration:
+	typeDeclaration SEMICOLON ID EQUAL type
 	| ID EQUAL type;
 
 type:
-	standard_type
-	| RECORD record_body END
-	| ARRAY '[' periods ']' OF type;
+	standardType
+	| RECORD recordBody END
+	| ARRAY LBRACKET periods RBRACKET OF type;
 
-standard_type: INTEGER | BOOLEAN | REAL | CHAR;
+standardType: INTEGER | BOOLEAN | REAL | CHAR;
 
-record_body: var_declaration |;
+recordBody: varDeclaration |;
 
-periods: periods ',' period | period;
+periods: periods COMMA period | period;
 
-period: const_variable '..' const_variable;
+period: constVariable PERIODOP constVariable;
 
-var_declarations: VAR var_declaration ';' |;
+varDeclarations: VAR varDeclaration SEMICOLON |;
 
-var_declaration:
-	var_declaration ';' identifier_list ':' type
-	| identifier_list ':' type;
+varDeclaration:
+	varDeclaration SEMICOLON identifierList COLON type
+	| identifierList COLON type;
 
-subprogram_declarations:
-	subprogram_declarations subprogram_declaration
+subprogramDeclarations:
+	subprogramDeclarations subprogramDeclaration
 	|;
 
-subprogram_declaration: subprogram_head program_body ';';
+subprogramDeclaration: subprogramHead programBody SEMICOLON;
 
-subprogram_head:
-	FUNCTION ID formal_parameter ':' standard_type ';'
-	| PROCEDURE ID formal_parameter ';';
+subprogramHead:
+	FUNCTION ID formalParameter COLON standardType SEMICOLON
+	| PROCEDURE ID formalParameter SEMICOLON;
 
-formal_parameter: '(' parameter_lists ')' |;
+formalParameter: LPAREN parameterLists RPAREN |;
 
-parameter_lists:
-	parameter_lists ';' parameter_list
-	| parameter_list;
+parameterLists:
+	parameterLists SEMICOLON parameterList
+	| parameterList;
 
-parameter_list: var_parameter | value_parameter;
+parameterList: varParameter | valueParameter;
 
-var_parameter: VAR value_parameter;
+varParameter: VAR valueParameter;
 
-value_parameter: identifier_list ':' standard_type;
+valueParameter: identifierList COLON standardType;
 
-compound_statement: BEGIN statement_list END;
+compoundStatement: BEGIN statementList END;
 
-statement_list: statement_list ';' statement | statement;
+statementList: statementList SEMICOLON statement | statement;
 
 statement:
-	variable ASSIGNOP expression
-	| call_procedure_statement
-	| compound_statement
-	| IF expression THEN statement else_part
-	| CASE expression OF case_body END
-	| WHILE expression DO statement
-	| REPEAT statement_list UNTIL expression
-	| FOR ID ASSIGNOP expression updown expression DO statement
-	|;
+	variable ASSIGNOP expression								# assignmentStatement
+	| callProcedureStatement									# statementCallProcedureStatement
+	| compoundStatement											# statementCompoundStatement
+	| IF expression THEN statement elsePart						# ifStatement
+	| CASE expression OF caseBody END							# caseStatement
+	| WHILE expression DO statement								# whileStatement
+	| REPEAT statementList UNTIL expression						# repeatStatement
+	| FOR ID ASSIGNOP expression updown expression DO statement	# forStatement
+	|															# emptyStatement;
 
-variable: ID id_varparts;
+variable: ID idVarparts;
 
-id_varparts: id_varparts id_varpart |;
+idVarparts: idVarparts idVarpart |;
 
-id_varpart: '[' expression_list ']' | '.' ID;
+idVarpart: LBRACKET expressionList RBRACKET | DOT ID;
 
-else_part: ELSE statement |;
+elsePart: ELSE statement |;
 
-case_body: branch_list |;
+caseBody: branchList |;
 
-branch_list: branch_list ';' branch | branch;
+branchList: branchList SEMICOLON branch | branch;
 
-branch: const_list ':' statement;
+branch: constList COLON statement;
 
-const_list: const_list ',' const_variable | const_variable;
+constList: constList COMMA constVariable | constVariable;
 
 updown: TO | DOWNTO;
 
-call_procedure_statement: ID | ID '(' expression_list ')';
+callProcedureStatement: ID | ID LPAREN expressionList RPAREN;
 
-expression_list: expression_list ',' expression | expression;
+expressionList: expressionList COMMA expression | expression;
 
 expression:
-	simple_expression RELOP simple_expression
-	| simple_expression;
+	simpleExpression RELOP simpleExpression
+	| simpleExpression;
 
-simple_expression:
+simpleExpression:
 	term
 	| PLUS term
 	| MINUS term
-	| simple_expression ADDOP term;
+	| simpleExpression ADDOP term;
 
 term: term MULOP factor | factor;
 
+boolean: TRUE | FALSE;
+
 factor:
-	unsign_const_variable
+	unsignConstVariable
 	| variable
-	| ID '(' expression_list ')'
-	| '(' expression ')'
-	| NOT factor;
+	| ID LPAREN expressionList RPAREN
+	| LPAREN expression RPAREN
+	| NOT factor
+	| boolean;
 
-unsign_const_variable: ID | NUM | '\'' LETTER '\'';
-
-// --- Lexer Rules ---
-
-RELOP: EQUAL | '<>' | '<' | '<=' | '>' | '>=';
-
-EQUAL: '=';
-
-ADDOP: PLUS | MINUS | OR;
-
-MULOP: MULT | DIVIDE | DIV | MOD | AND;
-
-PLUS: '+';
-
-MINUS: '-';
-
-MULT: '*';
-
-DIVIDE: '/';
-
-ASSIGNOP: ':=';
-
-AND: 'and';
-
-OR: 'or';
-
-NOT: 'not';
-
-INTEGER: 'integer';
-
-REAL: 'real';
-
-BOOLEAN: 'boolean';
-
-CHAR: 'char';
-
-ARRAY: 'array';
-
-BEGIN: 'begin';
-
-CASE: 'case';
-
-CONST: 'const';
-
-DIV: 'div';
-
-DO: 'do';
-
-DOWNTO: 'downto';
-
-ELSE: 'else';
-
-END: 'end';
-
-FOR: 'for';
-
-FUNCTION: 'function';
-
-IF: 'if';
-
-MOD: 'mod';
-
-OF: 'of';
-
-PROCEDURE: 'procedure';
-
-PROGRAM: 'program';
-
-RECORD: 'record';
-
-REPEAT: 'repeat';
-
-THEN: 'then';
-
-TO: 'to';
-
-TYPE: 'type';
-
-UNTIL: 'until';
-
-VAR: 'var';
-
-WHILE: 'while';
-
-ID: LETTER (LETTER | DIGIT)*;
-
-LETTER: [a-zA-Z];
-
-NUM: DIGITS FRAC? EXPONENT?;
-
-EXPONENT: 'E' [+-]? DIGITS;
-
-FRAC: '.' DIGITS;
-
-DIGITS: DIGIT DIGIT*;
-
-DIGIT: [0-9];
-
-NEWLINE: '\r'? '\n' -> skip;
-
-WS: [ \t]+ -> skip;
+unsignConstVariable: ID | NUM | QUOTE LETTER QUOTE;

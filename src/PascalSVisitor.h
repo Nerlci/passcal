@@ -21,89 +21,107 @@ public:
    */
     virtual std::any visitProgram(PascalSParser::ProgramContext *context) = 0;
 
-    virtual std::any visitProgram_head(PascalSParser::Program_headContext *context) = 0;
+    virtual std::any visitProgramHead(PascalSParser::ProgramHeadContext *context) = 0;
 
-    virtual std::any visitProgram_body(PascalSParser::Program_bodyContext *context) = 0;
+    virtual std::any visitProgramBody(PascalSParser::ProgramBodyContext *context) = 0;
 
-    virtual std::any visitIdentifier_list(PascalSParser::Identifier_listContext *context) = 0;
+    virtual std::any visitIdentifierList(PascalSParser::IdentifierListContext *context) = 0;
 
-    virtual std::any visitConst_declarations(PascalSParser::Const_declarationsContext *context) = 0;
+    virtual std::any visitConstDeclarations(PascalSParser::ConstDeclarationsContext *context) = 0;
 
-    virtual std::any visitConst_declaration(PascalSParser::Const_declarationContext *context) = 0;
+    virtual std::any visitConstDeclaration(PascalSParser::ConstDeclarationContext *context) = 0;
 
-    virtual std::any visitConst_variable(PascalSParser::Const_variableContext *context) = 0;
+    virtual std::any visitConstVariable(PascalSParser::ConstVariableContext *context) = 0;
 
-    virtual std::any visitType_declarations(PascalSParser::Type_declarationsContext *context) = 0;
+    virtual std::any visitTypeDeclarations(PascalSParser::TypeDeclarationsContext *context) = 0;
 
-    virtual std::any visitType_declaration(PascalSParser::Type_declarationContext *context) = 0;
+    virtual std::any visitTypeDeclaration(PascalSParser::TypeDeclarationContext *context) = 0;
 
     virtual std::any visitType(PascalSParser::TypeContext *context) = 0;
 
-    virtual std::any visitStandard_type(PascalSParser::Standard_typeContext *context) = 0;
+    virtual std::any visitStandardType(PascalSParser::StandardTypeContext *context) = 0;
 
-    virtual std::any visitRecord_body(PascalSParser::Record_bodyContext *context) = 0;
+    virtual std::any visitRecordBody(PascalSParser::RecordBodyContext *context) = 0;
 
     virtual std::any visitPeriods(PascalSParser::PeriodsContext *context) = 0;
 
     virtual std::any visitPeriod(PascalSParser::PeriodContext *context) = 0;
 
-    virtual std::any visitVar_declarations(PascalSParser::Var_declarationsContext *context) = 0;
+    virtual std::any visitVarDeclarations(PascalSParser::VarDeclarationsContext *context) = 0;
 
-    virtual std::any visitVar_declaration(PascalSParser::Var_declarationContext *context) = 0;
+    virtual std::any visitVarDeclaration(PascalSParser::VarDeclarationContext *context) = 0;
 
-    virtual std::any visitSubprogram_declarations(PascalSParser::Subprogram_declarationsContext *context) = 0;
+    virtual std::any visitSubprogramDeclarations(PascalSParser::SubprogramDeclarationsContext *context) = 0;
 
-    virtual std::any visitSubprogram_declaration(PascalSParser::Subprogram_declarationContext *context) = 0;
+    virtual std::any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext *context) = 0;
 
-    virtual std::any visitSubprogram_head(PascalSParser::Subprogram_headContext *context) = 0;
+    virtual std::any visitSubprogramHead(PascalSParser::SubprogramHeadContext *context) = 0;
 
-    virtual std::any visitFormal_parameter(PascalSParser::Formal_parameterContext *context) = 0;
+    virtual std::any visitFormalParameter(PascalSParser::FormalParameterContext *context) = 0;
 
-    virtual std::any visitParameter_lists(PascalSParser::Parameter_listsContext *context) = 0;
+    virtual std::any visitParameterLists(PascalSParser::ParameterListsContext *context) = 0;
 
-    virtual std::any visitParameter_list(PascalSParser::Parameter_listContext *context) = 0;
+    virtual std::any visitParameterList(PascalSParser::ParameterListContext *context) = 0;
 
-    virtual std::any visitVar_parameter(PascalSParser::Var_parameterContext *context) = 0;
+    virtual std::any visitVarParameter(PascalSParser::VarParameterContext *context) = 0;
 
-    virtual std::any visitValue_parameter(PascalSParser::Value_parameterContext *context) = 0;
+    virtual std::any visitValueParameter(PascalSParser::ValueParameterContext *context) = 0;
 
-    virtual std::any visitCompound_statement(PascalSParser::Compound_statementContext *context) = 0;
+    virtual std::any visitCompoundStatement(PascalSParser::CompoundStatementContext *context) = 0;
 
-    virtual std::any visitStatement_list(PascalSParser::Statement_listContext *context) = 0;
+    virtual std::any visitStatementList(PascalSParser::StatementListContext *context) = 0;
 
-    virtual std::any visitStatement(PascalSParser::StatementContext *context) = 0;
+    virtual std::any visitAssignmentStatement(PascalSParser::AssignmentStatementContext *context) = 0;
+
+    virtual std::any visitStatementCallProcedureStatement(PascalSParser::StatementCallProcedureStatementContext *context) = 0;
+
+    virtual std::any visitStatementCompoundStatement(PascalSParser::StatementCompoundStatementContext *context) = 0;
+
+    virtual std::any visitIfStatement(PascalSParser::IfStatementContext *context) = 0;
+
+    virtual std::any visitCaseStatement(PascalSParser::CaseStatementContext *context) = 0;
+
+    virtual std::any visitWhileStatement(PascalSParser::WhileStatementContext *context) = 0;
+
+    virtual std::any visitRepeatStatement(PascalSParser::RepeatStatementContext *context) = 0;
+
+    virtual std::any visitForStatement(PascalSParser::ForStatementContext *context) = 0;
+
+    virtual std::any visitEmptyStatement(PascalSParser::EmptyStatementContext *context) = 0;
 
     virtual std::any visitVariable(PascalSParser::VariableContext *context) = 0;
 
-    virtual std::any visitId_varparts(PascalSParser::Id_varpartsContext *context) = 0;
+    virtual std::any visitIdVarparts(PascalSParser::IdVarpartsContext *context) = 0;
 
-    virtual std::any visitId_varpart(PascalSParser::Id_varpartContext *context) = 0;
+    virtual std::any visitIdVarpart(PascalSParser::IdVarpartContext *context) = 0;
 
-    virtual std::any visitElse_part(PascalSParser::Else_partContext *context) = 0;
+    virtual std::any visitElsePart(PascalSParser::ElsePartContext *context) = 0;
 
-    virtual std::any visitCase_body(PascalSParser::Case_bodyContext *context) = 0;
+    virtual std::any visitCaseBody(PascalSParser::CaseBodyContext *context) = 0;
 
-    virtual std::any visitBranch_list(PascalSParser::Branch_listContext *context) = 0;
+    virtual std::any visitBranchList(PascalSParser::BranchListContext *context) = 0;
 
     virtual std::any visitBranch(PascalSParser::BranchContext *context) = 0;
 
-    virtual std::any visitConst_list(PascalSParser::Const_listContext *context) = 0;
+    virtual std::any visitConstList(PascalSParser::ConstListContext *context) = 0;
 
     virtual std::any visitUpdown(PascalSParser::UpdownContext *context) = 0;
 
-    virtual std::any visitCall_procedure_statement(PascalSParser::Call_procedure_statementContext *context) = 0;
+    virtual std::any visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext *context) = 0;
 
-    virtual std::any visitExpression_list(PascalSParser::Expression_listContext *context) = 0;
+    virtual std::any visitExpressionList(PascalSParser::ExpressionListContext *context) = 0;
 
     virtual std::any visitExpression(PascalSParser::ExpressionContext *context) = 0;
 
-    virtual std::any visitSimple_expression(PascalSParser::Simple_expressionContext *context) = 0;
+    virtual std::any visitSimpleExpression(PascalSParser::SimpleExpressionContext *context) = 0;
 
     virtual std::any visitTerm(PascalSParser::TermContext *context) = 0;
 
+    virtual std::any visitBoolean(PascalSParser::BooleanContext *context) = 0;
+
     virtual std::any visitFactor(PascalSParser::FactorContext *context) = 0;
 
-    virtual std::any visitUnsign_const_variable(PascalSParser::Unsign_const_variableContext *context) = 0;
+    virtual std::any visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext *context) = 0;
 
 
 };
