@@ -1,20 +1,18 @@
 #include "CodeGenVisitor.h"
 
-CodeGenVisitor::CodeGenVisitor() : builder(context) {
-    module = std::make_unique<Module>("PascalS", context);
+CodeGenVisitor::CodeGenVisitor()
+    : builder(context) {
 }
 
-antlrcpp::Any CodeGenVisitor::visitProgram(PascalSParser::ProgramContext *ctx) {
-    // Handle the program node
+antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
+    // Create a new LLVM module
+    auto program_id_node = ctx->ID();
+    std::string program_name = program_id_node->getText();
+    module = std::make_unique<Module>(program_name, context);
     return visitChildren(ctx);
 }
 
-antlrcpp::Any CodeGenVisitor::visitAssignment(PascalSParser::AssignmentContext *ctx) {
-    // Generate LLVM IR for assignment
-    return visitChildren(ctx);
-}
-
-antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext *ctx) {
+antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* ctx) {
     // Generate LLVM IR for expression
     return visitChildren(ctx);
 }

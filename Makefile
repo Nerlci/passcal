@@ -10,10 +10,10 @@ LINK := $(ANTLR_LIB) $(LLVM_LIBS)
 SOURCES := $(wildcard src/*.cpp)
 
 main: antlrs
-	$(CC) $(ANTLR_INCLUDE) $(LLVM_INCLUDE) $(LLVM_CXXFLAGS) $(SOURCES) -o pascal_parser $(LINK)
+	$(CC) $(ANTLR_INCLUDE) $(LLVM_INCLUDE) $(LLVM_CXXFLAGS) $(SOURCES) -o passcal $(LINK)
 
 antlrs: src/PascalS.g4
 	antlr4 -Dlanguage=Cpp -visitor -no-listener src/PascalS.g4
 
 clean:
-	rm *.o pascal_parser
+	rm *.o passcal

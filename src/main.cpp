@@ -1,19 +1,25 @@
+#include "CodeGenVisitor.h"
 #include "PascalSLexer.h"
 #include "PascalSParser.h"
-#include "CodeGenVisitor.h"
 
 using namespace antlr4;
 
 int main(int argc, const char* argv[]) {
+    if (argc != 2) {
+        std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
+        return 1;
+    }
+
+    std::string filename = argv[1];
     std::ifstream stream;
-    stream.open("test.pas");
+    stream.open(filename);
     ANTLRInputStream input(stream);
     PascalSLexer lexer(&input);
     CommonTokenStream tokens(&lexer);
     PascalSParser parser(&tokens);
 
     tree::ParseTree* tree = parser.program();
-    
+
     CodeGenVisitor codeGen;
     codeGen.visit(tree);
 
