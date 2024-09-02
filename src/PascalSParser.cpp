@@ -2,7 +2,7 @@
 // Generated from src/PascalS.g4 by ANTLR 4.13.2
 
 
-#include "PascalSListener.h"
+#include "PascalSVisitor.h"
 
 #include "PascalSParser.h"
 
@@ -160,16 +160,12 @@ size_t PascalSParser::ProgramContext::getRuleIndex() const {
   return PascalSParser::RuleProgram;
 }
 
-void PascalSParser::ProgramContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterProgram(this);
-}
 
-void PascalSParser::ProgramContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitProgram(this);
+std::any PascalSParser::ProgramContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitProgram(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::ProgramContext* PascalSParser::program() {
@@ -233,16 +229,12 @@ size_t PascalSParser::BlockContext::getRuleIndex() const {
   return PascalSParser::RuleBlock;
 }
 
-void PascalSParser::BlockContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterBlock(this);
-}
 
-void PascalSParser::BlockContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitBlock(this);
+std::any PascalSParser::BlockContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitBlock(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::BlockContext* PascalSParser::block() {
@@ -311,16 +303,12 @@ size_t PascalSParser::VarDeclarationContext::getRuleIndex() const {
   return PascalSParser::RuleVarDeclaration;
 }
 
-void PascalSParser::VarDeclarationContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterVarDeclaration(this);
-}
 
-void PascalSParser::VarDeclarationContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitVarDeclaration(this);
+std::any PascalSParser::VarDeclarationContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitVarDeclaration(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::VarDeclarationContext* PascalSParser::varDeclaration() {
@@ -385,16 +373,12 @@ size_t PascalSParser::VariableContext::getRuleIndex() const {
   return PascalSParser::RuleVariable;
 }
 
-void PascalSParser::VariableContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterVariable(this);
-}
 
-void PascalSParser::VariableContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitVariable(this);
+std::any PascalSParser::VariableContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitVariable(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::VariableContext* PascalSParser::variable() {
@@ -442,16 +426,12 @@ size_t PascalSParser::StatementListContext::getRuleIndex() const {
   return PascalSParser::RuleStatementList;
 }
 
-void PascalSParser::StatementListContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterStatementList(this);
-}
 
-void PascalSParser::StatementListContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitStatementList(this);
+std::any PascalSParser::StatementListContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitStatementList(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::StatementListContext* PascalSParser::statementList() {
@@ -506,16 +486,12 @@ size_t PascalSParser::StatementContext::getRuleIndex() const {
   return PascalSParser::RuleStatement;
 }
 
-void PascalSParser::StatementContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterStatement(this);
-}
 
-void PascalSParser::StatementContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitStatement(this);
+std::any PascalSParser::StatementContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitStatement(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::StatementContext* PascalSParser::statement() {
@@ -563,16 +539,12 @@ size_t PascalSParser::AssignmentContext::getRuleIndex() const {
   return PascalSParser::RuleAssignment;
 }
 
-void PascalSParser::AssignmentContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterAssignment(this);
-}
 
-void PascalSParser::AssignmentContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitAssignment(this);
+std::any PascalSParser::AssignmentContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitAssignment(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::AssignmentContext* PascalSParser::assignment() {
@@ -624,16 +596,12 @@ size_t PascalSParser::ExpressionContext::getRuleIndex() const {
   return PascalSParser::RuleExpression;
 }
 
-void PascalSParser::ExpressionContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterExpression(this);
-}
 
-void PascalSParser::ExpressionContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitExpression(this);
+std::any PascalSParser::ExpressionContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitExpression(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::ExpressionContext* PascalSParser::expression() {
@@ -705,16 +673,12 @@ size_t PascalSParser::TermContext::getRuleIndex() const {
   return PascalSParser::RuleTerm;
 }
 
-void PascalSParser::TermContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterTerm(this);
-}
 
-void PascalSParser::TermContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitTerm(this);
+std::any PascalSParser::TermContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitTerm(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::TermContext* PascalSParser::term() {
@@ -790,16 +754,12 @@ size_t PascalSParser::FactorContext::getRuleIndex() const {
   return PascalSParser::RuleFactor;
 }
 
-void PascalSParser::FactorContext::enterRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->enterFactor(this);
-}
 
-void PascalSParser::FactorContext::exitRule(tree::ParseTreeListener *listener) {
-  auto parserListener = dynamic_cast<PascalSListener *>(listener);
-  if (parserListener != nullptr)
-    parserListener->exitFactor(this);
+std::any PascalSParser::FactorContext::accept(tree::ParseTreeVisitor *visitor) {
+  if (auto parserVisitor = dynamic_cast<PascalSVisitor*>(visitor))
+    return parserVisitor->visitFactor(this);
+  else
+    return visitor->visitChildren(this);
 }
 
 PascalSParser::FactorContext* PascalSParser::factor() {

@@ -1,7 +1,6 @@
-#include <iostream>
-#include "antlr4-runtime.h"
 #include "PascalSLexer.h"
 #include "PascalSParser.h"
+#include "CodeGenVisitor.h"
 
 using namespace antlr4;
 
@@ -14,7 +13,11 @@ int main(int argc, const char* argv[]) {
     PascalSParser parser(&tokens);
 
     tree::ParseTree* tree = parser.program();
-    std::cout << tree->toStringTree(&parser) << std::endl;
+    
+    CodeGenVisitor codeGen;
+    codeGen.visit(tree);
+
+    codeGen.module->print(outs(), nullptr);
 
     return 0;
 }
