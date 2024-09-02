@@ -1,5 +1,5 @@
 # passcal
-Pascal-S compiler based on ANTLR.
+Pascal-S compiler based on ANTLR and LLVM.
 
 ## Setup
 
@@ -63,4 +63,3 @@ Install
 ```
 sudo make install
 ```
-

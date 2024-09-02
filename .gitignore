@@ -31,5 +31,4 @@
 *.out
 *.app
 
-compile_commands.json
-.cache/
+.vscode/
