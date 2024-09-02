@@ -43,7 +43,13 @@ git clone git@github.com:antlr/antlr4.git
 Go to the runtime directory.
 
 ```
-cd ./runtime/Cpp/
+cd ./antlr4/runtime/Cpp/
+```
+
+Switch to a release version
+
+```
+git checkout 4.13.2
 ```
 
 Build
