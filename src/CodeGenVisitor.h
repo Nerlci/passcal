@@ -23,7 +23,7 @@ public:
     antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) override;
     antlrcpp::Any visitFactor(PascalSParser::FactorContext *ctx) override;
 //    antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext *ctx) override;
-//    antlrcpp::Any visitTerm(PascalSParser::TermContext *ctx) override;
+    antlrcpp::Any visitTerm(PascalSParser::TermContext *ctx) override;
 
 
     // Declare other visit methods as needed
