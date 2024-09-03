@@ -123,6 +123,14 @@ public:
 
     virtual std::any visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext *context) = 0;
 
+    virtual std::any visitIdentifier(PascalSParser::IdentifierContext *context) = 0;
+
+    virtual std::any visitRelationalOpreator(PascalSParser::RelationalOpreatorContext *context) = 0;
+
+    virtual std::any visitAddOperator(PascalSParser::AddOperatorContext *context) = 0;
+
+    virtual std::any visitMultiplyOperator(PascalSParser::MultiplyOperatorContext *context) = 0;
+
 
 };
 

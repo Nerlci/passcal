@@ -22,6 +22,8 @@ public:
     antlrcpp::Any visitProgramHead(PascalSParser::ProgramHeadContext* ctx) override;
 
     antlrcpp::Any visitConstDeclaration(PascalSParser::ConstDeclarationContext* ctx) override;
+    antlrcpp::Any visitConstVariable(PascalSParser::ConstVariableContext* ctx) override;
+
     antlrcpp::Any visitVarDeclaration(PascalSParser::VarDeclarationContext* ctx) override;
     antlrcpp::Any visitIdentifierList(PascalSParser::IdentifierListContext* ctx) override;
     antlrcpp::Any visitType(PascalSParser::TypeContext* ctx) override;
