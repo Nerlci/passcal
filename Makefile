@@ -8,12 +8,20 @@ LLVM_CXXFLAGS := -std=c++17 -funwind-tables -D_GNU_SOURCE -D__STDC_CONSTANT_MACR
 LINK := $(ANTLR_LIB) $(LLVM_LIBS)
 
 SOURCES := $(wildcard src/*.cpp)
+OBJECTS := $(SOURCES:src/%.cpp=obj/%.o)
 
-main: antlrs
-	$(CC) $(ANTLR_INCLUDE) $(LLVM_INCLUDE) $(LLVM_CXXFLAGS) $(SOURCES) -o passcal $(LINK)
+main: obj $(OBJECTS)
+	$(CC) $(OBJECTS) -o passcal $(LINK)
+
+# Ensure the obj directory exists
+obj:
+	mkdir -p obj
+
+obj/%.o: src/%.cpp | obj
+	$(CC) $(ANTLR_INCLUDE) $(LLVM_INCLUDE) $(LLVM_CXXFLAGS) -c $< -o $@
 
 antlrs: src/PascalS.g4
 	antlr4 -Dlanguage=Cpp -visitor -no-listener src/PascalS.g4
 
 clean:
-	rm *.o passcal
+	rm -f obj/*.o passcal
