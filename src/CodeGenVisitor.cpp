@@ -63,9 +63,24 @@ antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext *ctx) {
     return nullptr;
 }
 
-//antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext *ctx) {
-//
-//}
+antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext *ctx) {
+    if(!ctx->MULOP()){
+        return visitFactor(ctx->factor());
+    }
+    auto L = visitTerm(ctx->term());
+    auto R = visitFactor(ctx->factor());
+    if(ctx->MULOP()->getText() == "*"){
+        return builder.CreateMul(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"multmp");
+    } else if(ctx->MULOP()->getText() == "/"){
+        return builder.CreateSDiv(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"divtmp");
+    } else if(ctx->MULOP()->getText() == "div"){
+        return builder.CreateSDiv(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"divtmp");
+    } else if(ctx->MULOP()->getText() == "mod"){
+        return builder.CreateSRem(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"modtmp");
+    } else if(ctx->MULOP()->getText() == "and"){
+        return builder.CreateAnd(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"andtmp");
+    }
+}
 
 antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext *ctx) {
     if(!ctx->ADDOP()){
