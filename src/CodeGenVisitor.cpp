@@ -277,6 +277,43 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
     return value;
 }
 
+antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx){
+    // return: llvm::Value*
+//    std::cout << "simpleExp" << std::endl;
+    Value* value = nullptr;
+    if(ctx->PLUS()||ctx->MINUS()){
+        Value* termValue = std::any_cast<llvm::Value*>(visit(ctx->term()));
+        if(ctx->PLUS()){
+            value = termValue;
+        } else if(ctx->MINUS()){
+            value = builder.CreateNeg(termValue, "negtmp");
+        }
+    } else if (ctx->addOperator()){
+        llvm::Value* left = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression()));
+        llvm::Value* right = std::any_cast<llvm::Value*>(visit(ctx->term()));
+        std::string op = ctx->addOperator()->getText();
+
+        // Load the values if they are variables
+        if (left->getType()->isPointerTy()) {
+            left = builder.CreateLoad(left->getType(), left, "loadleft");
+        }
+        if (right->getType()->isPointerTy()) {
+            right = builder.CreateLoad(right->getType(), right, "loadright");
+        }
+        if (op == "+") {
+            value = builder.CreateAdd(left, right, "addtmp");
+        } else if (op == "-") {
+            value = builder.CreateSub(left, right, "subtmp");
+        } else if (op == "or") {
+            value = builder.CreateOr(left, right, "ortmp");
+        }
+    } else{
+        value = std::any_cast<llvm::Value*>(visit(ctx->term()));
+    }
+//    std::cout << "end simpleExp" << std::endl;
+    return value;
+}
+
 antlrcpp::Any CodeGenVisitor::visitIfStatement(PascalSParser::IfStatementContext* ctx) {
     // 访问条件表达式
     llvm::Value* condition = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
@@ -285,39 +322,43 @@ antlrcpp::Any CodeGenVisitor::visitIfStatement(PascalSParser::IfStatementContext
     llvm::Function* parentFunction = builder.GetInsertBlock()->getParent();
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context, "then", parentFunction);
     llvm::BasicBlock* elseBB;
-    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context, "endif");
 
     // 检查是否需要else块
-    if(ctx->elsePart() == nullptr) {
-        builder.CreateCondBr(condition, thenBB, mergeBB);
-    } else {
-        llvm::BasicBlock* elseBB = llvm::BasicBlock::Create(context, "else");
+    if (ctx->elsePart()->ELSE() != nullptr) {
+        elseBB = llvm::BasicBlock::Create(context, "else", parentFunction);
+    }
+
+    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context, "endif", parentFunction);
+
+    if (ctx->elsePart()->ELSE() != nullptr) {
         builder.CreateCondBr(condition, thenBB, elseBB);
+    } else {
+        builder.CreateCondBr(condition, thenBB, mergeBB);
     }
 
     // 访问then块
     builder.SetInsertPoint(thenBB);
-    visit(ctx->statement());  
+    visit(ctx->statement());
 
-    builder.CreateBr(mergeBB);  // 跳转到合并块
-    thenBB = builder.GetInsertBlock();  // 更新then块
+    builder.CreateBr(mergeBB); // 跳转到合并块
+    // thenBB = builder.GetInsertBlock(); // 更新then块
 
-    if(ctx->elsePart() != nullptr){
+    if (ctx->elsePart()->ELSE() != nullptr) {
         // 插入else块指令
         builder.SetInsertPoint(elseBB);
-        visit(ctx->elsePart()->statement());  // 访问else块
-        builder.CreateBr(mergeBB);  // 跳转到合并块
-        elseBB = builder.GetInsertBlock();  // 更新else块
+        visit(ctx->elsePart()->statement()); // 访问else块
+        builder.CreateBr(mergeBB); // 跳转到合并块
+        elseBB = builder.GetInsertBlock(); // 更新else块
     }
     // 插入合并块指令
     builder.SetInsertPoint(mergeBB);
 
-    return nullptr;  // 返回结果
+    return nullptr; // 返回结果
 }
 
 antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementContext *ctx) {
     // 循环变量
-    std::string loopVar = ctx->identifier()->getText();
+    std::string loopVar = ctx->ID()->getText();
     
     // Get the initial value
     Value *initValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(0)));
