@@ -49,7 +49,15 @@ public:
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
 
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
-    antlrcpp::Any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) override;
+    antlrcpp::Any visitIfStatement(PascalSParser::IfStatementContext* ctx) override;
+    antlrcpp::Any visitForStatement(PascalSParser::ForStatementContext* ctx) override;
+    antlrcpp::Any visitWhileStatement(PascalSParser::WhileStatementContext* ctx) override;
+    antlrcpp::Any visitRepeatStatement(PascalSParser::RepeatStatementContext* ctx) override;
+    antlrcpp::Any visitStatementList(PascalSParser::StatementListContext* ctx) override;
+    antlrcpp::Any visitCaseStatement(PascalSParser::CaseStatementContext* ctx) override;
+    antlrcpp::Any visitConstList(PascalSParser::ConstListContext* ctx) override;
+    antlrcpp::Any visitBranch(PascalSParser::BranchContext* ctx) override;
+    antlrcpp::Any visitBranchList(PascalSParser::BranchListContext* ctx) override;    antlrcpp::Any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) override;
     antlrcpp::Any visitSubprogramHead(PascalSParser::SubprogramHeadContext* ctx) override;
     antlrcpp::Any visitParameterLists(PascalSParser::ParameterListsContext* ctx) override;
     antlrcpp::Any visitParameterList(PascalSParser::ParameterListContext* ctx) override;
