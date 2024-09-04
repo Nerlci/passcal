@@ -165,10 +165,11 @@ antlrcpp::Any CodeGenVisitor::visitType(PascalSParser::TypeContext* ctx) {
     } else if (ctx->recordBody() != nullptr) {
         auto record_body = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->recordBody()));
 
-        std::vector<std::string> record_names;
+        std::map<std::string, int> record_names;
         std::vector<llvm::Type*> record_types;
+        int idx = 0;
         for (const auto& record : record_body) {
-            record_names.push_back(record.first);
+            record_names.insert({ record.first, idx++ });
             record_types.push_back(record.second);
         }
 
@@ -244,3 +245,34 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
 }
 
 // Implement other visit methods as needed
+
+Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
+    // Generate LLVM IR for getting array element
+    Type* array_type = ((AllocaInst*)array)->getAllocatedType();
+    std::vector<std::pair<int, int>> array_info = scope->getArray(array_type);
+    // if (array_info.size() != index.size()) {
+    //     throw SemanticException(filename, 0, 0, "Array index count mismatch");
+    // }
+
+    std::vector<Value*> offsetted_indices;
+    for (int i = 0; i < array_info.size(); i++) {
+        Value* start = ConstantInt::get(context, APInt(32, array_info[i].first));
+        Value* offset = builder.CreateSub(index[i], start);
+        offsetted_indices.push_back(offset);
+    }
+
+    return builder.CreateGEP(array_type, array, offsetted_indices);
+}
+
+Value* CodeGenVisitor::getRecordElement(Value* record, std::string& field) {
+    // Generate LLVM IR for getting record element
+    Type* record_type = ((AllocaInst*)record)->getAllocatedType();
+    std::map<std::string, int> record_info = scope->getRecord(record_type);
+    int index = record_info[field];
+
+    // if (index == -1) {
+    //     throw SemanticException(filename, 0, 0, "Field '" + field + "' not found in record");
+    // }
+
+    return builder.CreateStructGEP(record_type, record, index);
+}
