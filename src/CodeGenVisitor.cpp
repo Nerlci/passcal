@@ -38,6 +38,7 @@ antlrcpp::Any CodeGenVisitor::visitConstDeclaration(PascalSParser::ConstDeclarat
     return nullptr;
 }
 
+// @return llvm::Value*
 antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableContext* ctx) {
     // Generate LLVM IR for constant variable
     llvm::Value* value = nullptr;
@@ -74,28 +75,54 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
     return value;
 }
 
+antlrcpp::Any CodeGenVisitor::visitTypeDeclaration(PascalSParser::TypeDeclarationContext* ctx) {
+    // Generate LLVM IR for type declaration
+    if (ctx->typeDeclaration() != nullptr) {
+        visit(ctx->typeDeclaration());
+    }
+
+    std::string identifier = ctx->identifier()->getText();
+    llvm::Type* type = std::any_cast<llvm::Type*>(visit(ctx->type()));
+
+    return nullptr;
+}
+
+antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclarationsContext* ctx) {
+    // Generate LLVM IR for variable declarations
+    auto var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
+
+    for (const auto& var_declaration : var_declarations) {
+        std::string identifier = var_declaration.first;
+        llvm::Type* type = var_declaration.second;
+
+        auto alloca = builder.CreateAlloca(type, nullptr, identifier);
+        scope->put(identifier, alloca);
+    }
+
+    return nullptr;
+}
+
+// @return std::map<std::string, llvm::Type*>
 antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationContext* ctx) {
     // Generate LLVM IR for variable declaration
+    // TODO: Return maps of variable names to types
+    std::map<std::string, llvm::Type*> var_declarations;
     if (ctx->varDeclaration() != nullptr) {
-        visit(ctx->varDeclaration());
+        auto prev_var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
+        var_declarations.insert(prev_var_declarations.begin(), prev_var_declarations.end());
     }
 
     auto identifiers = std::any_cast<std::vector<std::string>>(visit(ctx->identifierList()));
     auto type = std::any_cast<llvm::Type*>(visit(ctx->type()));
 
     for (const auto& identifier : identifiers) {
-        // Create an alloca instruction for the variable
-        // TODO: Handle array types and record types
-        if (scope->get(identifier) != nullptr) {
-            // TODO: Handle redeclaration
-        }
-
-        auto alloca = builder.CreateAlloca(type, nullptr, identifier);
-        scope->put(identifier, alloca);
+        var_declarations[identifier] = type;
     }
-    return nullptr;
+
+    return var_declarations;
 }
 
+// @return std::vector<std::string>
 antlrcpp::Any CodeGenVisitor::visitIdentifierList(PascalSParser::IdentifierListContext* ctx) {
     // Generate LLVM IR for identifier list
     std::vector<std::string> identifiers;
@@ -110,18 +137,85 @@ antlrcpp::Any CodeGenVisitor::visitIdentifierList(PascalSParser::IdentifierListC
     return identifiers;
 }
 
+// @return llvm::Type*
 antlrcpp::Any CodeGenVisitor::visitType(PascalSParser::TypeContext* ctx) {
     // Generate LLVM IR for type
     llvm::Type* type = nullptr;
     if (ctx->standardType() != nullptr) {
         type = std::any_cast<llvm::Type*>(visit(ctx->standardType()));
-    } else {
-        type = Type::getInt32Ty(context);
+    } else if (ctx->recordBody() != nullptr) {
+        type = std::any_cast<llvm::Type*>(visit(ctx->recordBody()));
+    } else if (ctx->ARRAY() != nullptr) {
+        auto array_type_content = std::any_cast<llvm::Type*>(visit(ctx->type()));
+        auto array_period = std::any_cast<std::vector<std::pair<int, int>>>(visit(ctx->periods()));
+
+        for (auto period = array_period.rbegin(); period != array_period.rend(); ++period) {
+            int start = period->first;
+            int end = period->second;
+            array_type_content = ArrayType::get(array_type_content, end - start + 1);
+            std::cout << start << " " << end << std::endl;
+        }
+
+        type = array_type_content;
     }
 
     return type;
 }
 
+// @return std::vector<std::pair<int, int>>
+antlrcpp::Any CodeGenVisitor::visitPeriods(PascalSParser::PeriodsContext* ctx) {
+    // Generate LLVM IR for periods
+    std::vector<std::pair<int, int>> periods;
+    if (ctx->periods() != nullptr) {
+        auto next_periods = std::any_cast<std::vector<std::pair<int, int>>>(visit(ctx->periods()));
+        periods.insert(periods.begin(), next_periods.begin(), next_periods.end());
+    }
+
+    auto period = std::any_cast<std::pair<int, int>>(visit(ctx->period()));
+    periods.push_back(period);
+
+    return periods;
+}
+
+// @return std::pair<int, int>
+antlrcpp::Any CodeGenVisitor::visitPeriod(PascalSParser::PeriodContext* ctx) {
+    // Generate LLVM IR for period
+    auto start_const = (llvm::Constant*)std::any_cast<llvm::Value*>(visit(ctx->constVariable(0)));
+    auto end_const = (llvm::Constant*)std::any_cast<llvm::Value*>(visit(ctx->constVariable(1)));
+    int start = start_const->getUniqueInteger().getLimitedValue();
+    int end = end_const->getUniqueInteger().getLimitedValue();
+
+    return std::make_pair(start, end);
+}
+
+antlrcpp::Any CodeGenVisitor::visitRecordBody(PascalSParser::RecordBodyContext* ctx) {
+    // Generate LLVM IR for record body
+    llvm::StructType* record = nullptr;
+    if (ctx->varDeclaration() != nullptr) {
+        auto var_declaration = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
+        // std::vector<llvm::Type*> elements;
+
+        // if (ctx->recordSection() != nullptr) {
+        //     auto record_sections = ctx->recordSection();
+        //     for (auto record_section : record_sections) {
+        //         auto identifiers = std::any_cast<std::vector<std::string>>(visit(record_section->identifierList()));
+        //         auto type = std::any_cast<llvm::Type*>(visit(record_section->type()));
+
+        //         for (const auto& identifier : identifiers) {
+        //             elements.push_back(type);
+        //         }
+        //     }
+        // }
+
+        // record = llvm::StructType::create(context, elements, "record");
+    } else {
+        record = llvm::StructType::create(context, "record");
+    }
+
+    return record;
+}
+
+// @return llvm::Type*
 antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeContext* ctx) {
     // Generate LLVM IR for standard type
     llvm::Type* type = nullptr;
