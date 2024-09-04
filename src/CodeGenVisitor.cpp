@@ -1,7 +1,13 @@
 #include "CodeGenVisitor.h"
+#include "Exception/SemanticException.h"
 
 CodeGenVisitor::CodeGenVisitor()
     : builder(context) {
+}
+
+CodeGenVisitor::CodeGenVisitor(const std::string& filename)
+    : builder(context)
+    , filename(filename) {
 }
 
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
@@ -58,7 +64,8 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
         auto global = module->getNamedGlobal(identifier);
 
         if (global == nullptr) {
-            // TODO: Handle undeclared identifier
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "'" + identifier + "' was not declared in this scope or is not a constant");
         } else {
             value = (llvm::ConstantInt*)global->getInitializer();
         }
@@ -94,9 +101,6 @@ antlrcpp::Any CodeGenVisitor::visitTypeDeclaration(PascalSParser::TypeDeclaratio
     std::string identifier = ctx->identifier()->getText();
     llvm::Type* type = std::any_cast<llvm::Type*>(visit(ctx->type()));
 
-    if (!llvm::isa<llvm::StructType>(type)) {
-        // module->getOrInsertGlobal("type_" + identifier, type);
-    }
     llvm::StructType* type_struct = llvm::StructType::create(context, "type_" + identifier);
     type_struct->setBody(type);
     auto addr = builder.CreateAlloca(type_struct, nullptr, identifier);
@@ -124,7 +128,6 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclaration
 // @return std::map<std::string, llvm::Type*>
 antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationContext* ctx) {
     // Generate LLVM IR for variable declaration
-    // TODO: Return maps of variable names to types
     std::map<std::string, llvm::Type*> var_declarations;
     if (ctx->varDeclaration() != nullptr) {
         auto prev_var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
@@ -135,6 +138,11 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationC
     auto type = std::any_cast<llvm::Type*>(visit(ctx->type()));
 
     for (const auto& identifier : identifiers) {
+        if (var_declarations.find(identifier) != var_declarations.end()) {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "'" + identifier + "' was already declared in this scope");
+        }
+
         var_declarations[identifier] = type;
     }
 
