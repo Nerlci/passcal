@@ -414,6 +414,15 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
 antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
     // return: llvm::Value*
 
+//    初始化 value 为变量的基地址
+//      for 每个 idVarpart in idVarpartsCtx:
+//          if idVarpart 是数组索引:
+//              计算数组元素的地址
+//              更新 value 为新的地址
+//          else if idVarpart 是记录字段:
+//              计算字段的偏移量
+//              更新 value 为新的地址
+//      返回 value
     // Retrieve the base identifier
     std::string varName = ctx->identifier()->getText();
     llvm::Value* value = scope->get(varName);
