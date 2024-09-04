@@ -39,6 +39,9 @@ public:
 
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
 
+    Value* getArrayElement(Value* array, std::vector<Value*> index);
+    Value* getRecordElement(Value* record, std::string& field);
+
     // Declare other visit methods as needed
 };
 
