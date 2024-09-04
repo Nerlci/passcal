@@ -16,8 +16,10 @@ public:
     IRBuilder<> builder;
     std::unique_ptr<Module> module;
     Scope* scope = new Scope();
+    std::string filename;
 
     CodeGenVisitor();
+    CodeGenVisitor(const std::string& filename);
 
     antlrcpp::Any visitProgramHead(PascalSParser::ProgramHeadContext* ctx) override;
     antlrcpp::Any visitProgramBody(PascalSParser::ProgramBodyContext* ctx) override;
@@ -48,6 +50,9 @@ public:
     // Variable
     antlrcpp::Any visitVariable(PascalSParser::VariableContext* ctx) override;
 
+
+    Value* getArrayElement(Value* array, std::vector<Value*> index);
+    Value* getRecordElement(Value* record, std::string& field);
 
     // Declare other visit methods as needed
 };
