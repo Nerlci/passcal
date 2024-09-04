@@ -4,7 +4,6 @@ const
   f='a';
 type
   g=integer;
-
 var
   a,b:integer;
   c,d:integer;

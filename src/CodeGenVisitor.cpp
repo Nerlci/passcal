@@ -5,11 +5,17 @@ CodeGenVisitor::CodeGenVisitor()
 }
 
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
-
     // Create a new LLVM module
     auto program_id_node = ctx->identifier();
     std::string program_name = program_id_node->getText();
     module = std::make_unique<Module>(program_name, context);
+
+    llvm::FunctionType* mainFuncType = llvm::FunctionType::get(Type::getInt32Ty(context), false);
+    llvm::Function* mainFunc = llvm::Function::Create(mainFuncType, llvm::Function::ExternalLinkage, "main", module.get());
+    llvm::BasicBlock* mainEntry = llvm::BasicBlock::Create(context, "mainEntry", mainFunc);
+
+    builder.SetInsertPoint(mainEntry);
+
     return visitChildren(ctx);
 }
 
