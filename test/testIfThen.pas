@@ -1,15 +1,11 @@
-program test;
-
-Var a: integer;
-
-Var b: real;
-
-Var c: boolean;
-Begin
+program test(input,output);
+var 
+  a: integer;
+begin
   a := 1;
   b := 1.5;
   c := true;
-  If c Then writeln(111);
-  If a>b Then writeln(222);
+  if c then writeln(111);
+  if a>b then writeln(222);
   writeln(333)
-End.
+end.
