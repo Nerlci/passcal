@@ -56,16 +56,13 @@ antlrs: src/PascalS.g4
 clean:
 	rm -f build/obj/*.o passcal
 
-# Configuration target
 config:
 	@echo "Current mode: $(MODE)"
 	@echo "To change mode, run: make set MODE=<mode>"
 	@echo "Available modes: debug, release-dynamic, release-static"
 
-# Set the mode and save it to the config file
 set:
 	@echo "$(MODE)" > $(CONFIG_FILE)
 	@echo "Build mode set to $(MODE) and saved to $(CONFIG_FILE)"
 
-# Allow mode to be specified via command line
-.PHONY: clean config set-mode
+.PHONY: clean config set
