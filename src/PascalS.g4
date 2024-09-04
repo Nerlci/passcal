@@ -3,23 +3,24 @@ import PascalSLexerRules;
 
 program: programHead programBody DOT;
 
-programHead: PROGRAM ID LPAREN identifierList RPAREN SEMICOLON;
+programHead:
+	PROGRAM identifier LPAREN identifierList RPAREN SEMICOLON;
 
 programBody:
 	constDeclarations typeDeclarations varDeclarations subprogramDeclarations compoundStatement;
 
-identifierList: identifierList COMMA ID | ID;
+identifierList: identifierList COMMA identifier | identifier;
 
 constDeclarations: CONST constDeclaration SEMICOLON |;
 
 constDeclaration:
-	constDeclaration SEMICOLON ID EQUAL constVariable
-	| ID EQUAL constVariable;
+	constDeclaration SEMICOLON identifier EQUAL constVariable
+	| identifier EQUAL constVariable;
 
 constVariable:
-	PLUS ID
-	| MINUS ID
-	| ID
+	PLUS identifier
+	| MINUS identifier
+	| identifier
 	| PLUS NUM
 	| MINUS NUM
 	| NUM
@@ -28,8 +29,8 @@ constVariable:
 typeDeclarations: TYPE typeDeclaration SEMICOLON |;
 
 typeDeclaration:
-	typeDeclaration SEMICOLON ID EQUAL type
-	| ID EQUAL type;
+	typeDeclaration SEMICOLON identifier EQUAL type
+	| identifier EQUAL type;
 
 type:
 	standardType
@@ -57,8 +58,8 @@ subprogramDeclarations:
 subprogramDeclaration: subprogramHead programBody SEMICOLON;
 
 subprogramHead:
-	FUNCTION ID formalParameter COLON standardType SEMICOLON
-	| PROCEDURE ID formalParameter SEMICOLON;
+	FUNCTION identifier formalParameter COLON standardType SEMICOLON
+	| PROCEDURE identifier formalParameter SEMICOLON;
 
 formalParameter: LPAREN parameterLists RPAREN |;
 
@@ -77,21 +78,21 @@ compoundStatement: BEGIN statementList END;
 statementList: statementList SEMICOLON statement | statement;
 
 statement:
-	variable ASSIGNOP expression								# assignmentStatement
-	| callProcedureStatement									# statementCallProcedureStatement
-	| compoundStatement											# statementCompoundStatement
-	| IF expression THEN statement elsePart						# ifStatement
-	| CASE expression OF caseBody END							# caseStatement
-	| WHILE expression DO statement								# whileStatement
-	| REPEAT statementList UNTIL expression						# repeatStatement
-	| FOR ID ASSIGNOP expression updown expression DO statement	# forStatement
-	|															# emptyStatement;
+	variable ASSIGNOP expression										# assignmentStatement
+	| callProcedureStatement											# statementCallProcedureStatement
+	| compoundStatement													# statementCompoundStatement
+	| IF expression THEN statement elsePart								# ifStatement
+	| CASE expression OF caseBody END									# caseStatement
+	| WHILE expression DO statement										# whileStatement
+	| REPEAT statementList UNTIL expression								# repeatStatement
+	| FOR identifier ASSIGNOP expression updown expression DO statement	# forStatement
+	|																	# emptyStatement;
 
-variable: ID idVarparts;
+variable: identifier idVarparts;
 
 idVarparts: idVarparts idVarpart |;
 
-idVarpart: LBRACKET expressionList RBRACKET | DOT ID;
+idVarpart: LBRACKET expressionList RBRACKET | DOT identifier;
 
 elsePart: ELSE statement |;
 
@@ -105,30 +106,40 @@ constList: constList COMMA constVariable | constVariable;
 
 updown: TO | DOWNTO;
 
-callProcedureStatement: ID | ID LPAREN expressionList RPAREN;
+callProcedureStatement:
+	identifier
+	| identifier LPAREN expressionList RPAREN;
 
 expressionList: expressionList COMMA expression | expression;
 
 expression:
-	simpleExpression RELOP simpleExpression
+	simpleExpression relationalOpreator simpleExpression
 	| simpleExpression;
 
 simpleExpression:
 	term
 	| PLUS term
 	| MINUS term
-	| simpleExpression ADDOP term;
+	| simpleExpression addOperator term;
 
-term: term MULOP factor | factor;
+term: term multiplyOperator factor | factor;
 
 boolean: TRUE | FALSE;
 
 factor:
 	unsignConstVariable
 	| variable
-	| ID LPAREN expressionList RPAREN
+	| identifier LPAREN expressionList RPAREN
 	| LPAREN expression RPAREN
 	| NOT factor
 	| boolean;
 
-unsignConstVariable: ID | NUM | QUOTE LETTER QUOTE;
+unsignConstVariable: identifier | NUM | QUOTE LETTER QUOTE;
+
+identifier: LETTER (LETTER | DIGIT)*;
+
+relationalOpreator: EQUAL | '<>' | '<' | '<=' | '>' | '>=';
+
+addOperator: PLUS | MINUS | OR;
+
+multiplyOperator: MULT | DIVIDE | DIV | MOD | AND;

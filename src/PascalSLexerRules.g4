@@ -1,11 +1,5 @@
 lexer grammar PascalSLexerRules;
 
-RELOP: EQUAL | '<>' | '<' | '<=' | '>' | '>=';
-
-ADDOP: PLUS | MINUS | OR;
-
-MULOP: MULT | DIVIDE | DIV | MOD | AND;
-
 AND: 'and';
 
 OR: 'or';
@@ -71,8 +65,6 @@ UNTIL: 'until';
 VAR: 'var';
 
 WHILE: 'while';
-
-ID: LETTER (LETTER | DIGIT)*;
 
 LETTER: [a-zA-Z];
 

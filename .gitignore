@@ -36,3 +36,5 @@ passcal
 .vscode/
 compile_commands.json
 .cache/
+
+.antlr/

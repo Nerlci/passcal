@@ -1,8 +1,16 @@
 program aplusb(input,output);
-var 
+const 
+  e=1;
+  f='a';
+type
+  g=integer;
+
+var
   a,b:integer;
+  c,d:integer;
+  arr:array[1..10, 1..20] of integer;
 begin
     read(a);
     read(b);
-    write(a+b);
+    write(e);
 end.
