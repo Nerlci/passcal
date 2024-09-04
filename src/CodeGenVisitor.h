@@ -37,20 +37,16 @@ public:
     antlrcpp::Any visitPeriod(PascalSParser::PeriodContext* ctx) override;
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
 
+    // Expression
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
     antlrcpp::Any visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) override;
     antlrcpp::Any visitFactor(PascalSParser::FactorContext* ctx) override;
     antlrcpp::Any visitTerm(PascalSParser::TermContext *ctx) override;
     antlrcpp::Any visitBoolean(PascalSParser::BooleanContext* ctx) override;
     antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) override;
-//    antlrcpp::Any visitVariable(PascalSParser::VariableContext* ctx) override;
-//    antlrcpp::Any visitIdentifier(PascalSParser::IdentifierContext* ctx) override;
-//    antlrcpp::Any visitRelationalOpreator(PascalSParser::RelationalOpreatorContext *ctx) override;
-//    antlrcpp::Any visitAddOperator(PascalSParser::AddOperatorContext *ctx) override;
-//    antlrcpp::Any visitMultiplyOperator(PascalSParser::MultiplyOperatorContext *ctx) override;
-//    antlrcpp::Any visitFactor(PascalSParser::FactorContext *ctx) override;
-//    antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext *ctx) override;
 
+    // Variable
+    antlrcpp::Any visitVariable(PascalSParser::VariableContext* ctx) override;
 
 
     // Declare other visit methods as needed

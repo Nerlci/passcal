@@ -32,6 +32,5 @@ int main(int argc, const char* argv[]) {
     codeGen.visit(tree);
 
     codeGen.module->print(outs(), nullptr);
-    
     return 0;
 }

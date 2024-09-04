@@ -8,7 +8,7 @@ void Scope::putArray(const llvm::Type* type, const std::vector<std::pair<int, in
     array_table[type] = array;
 }
 
-void Scope::putRecord(const llvm::Type* type, const std::vector<std::string>& record) {
+void Scope::putRecord(const llvm::Type* type, const std::map<std::string, int>& record) {
     record_table[type] = record;
 }
 
@@ -32,7 +32,7 @@ std::vector<std::pair<int, int>> Scope::getArray(const llvm::Type* type) {
     return {};
 }
 
-std::vector<std::string> Scope::getRecord(const llvm::Type* type) {
+std::map<std::string, int> Scope::getRecord(const llvm::Type* type) {
     if (record_table.find(type) != record_table.end()) {
         return record_table[type];
     }

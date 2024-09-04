@@ -402,4 +402,14 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
     return value;
 }
 
+antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
+    // return: llvm::Value*
+    Value* value = scope->get(ctx->identifier()->getText());
+
+    for(auto varpart : ctx->idVarparts()->idVarpart()){
+
+    }
+
+}
+
 // 实现其他需要的访问方法
