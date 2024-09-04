@@ -63,3 +63,15 @@ Install
 ```
 sudo make install
 ```
+
+Update ld config, add the library path to /etc/ld.so.conf.d/antlr4.conf (create this file if it doesn't exist).
+
+```
+/usr/local/lib
+```
+
+Update the cache
+
+```
+sudo ldconfig
+```
