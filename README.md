@@ -75,3 +75,13 @@ Update the cache
 ```
 sudo ldconfig
 ```
+
+## Compile
+
+Use `make set` to change compile mode.
+
+```sh
+make set MODE=debug
+```
+
+The available configurations can be obtained by running `make config`.

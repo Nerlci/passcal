@@ -37,4 +37,6 @@ passcal
 compile_commands.json
 .cache/
 
+# Build artifacts
 .antlr/
+build/
