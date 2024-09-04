@@ -12,7 +12,7 @@ CodeGenVisitor::CodeGenVisitor(const std::string& filename)
 
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
     // Create a new LLVM module
-    auto program_id_node = ctx->identifier();
+    auto program_id_node = ctx->ID();
     std::string program_name = program_id_node->getText();
     module = std::make_unique<Module>(program_name, context);
 
@@ -41,7 +41,7 @@ antlrcpp::Any CodeGenVisitor::visitConstDeclaration(PascalSParser::ConstDeclarat
         visit(ctx->constDeclaration());
     }
 
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     llvm::Value* value = std::any_cast<llvm::Value*>(visit(ctx->constVariable()));
 
     module->getOrInsertGlobal(identifier, value->getType());
@@ -59,8 +59,8 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
     // Generate LLVM IR for constant variable
     llvm::Value* value = nullptr;
 
-    if (ctx->identifier() != nullptr) {
-        std::string identifier = ctx->identifier()->getText();
+    if (ctx->ID() != nullptr) {
+        std::string identifier = ctx->ID()->getText();
         auto global = module->getNamedGlobal(identifier);
 
         if (global == nullptr) {
@@ -84,8 +84,8 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
         }
     }
 
-    if (ctx->LETTER() != nullptr) {
-        char letter = ctx->LETTER()->getText()[0];
+    if (ctx->CHARLITERAL() != nullptr) {
+        char letter = ctx->CHARLITERAL()->getText()[1];
         value = ConstantInt::get(context, APInt(8, letter));
     }
 
@@ -98,7 +98,7 @@ antlrcpp::Any CodeGenVisitor::visitTypeDeclaration(PascalSParser::TypeDeclaratio
         visit(ctx->typeDeclaration());
     }
 
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     llvm::Type* type = std::any_cast<llvm::Type*>(visit(ctx->type()));
 
     llvm::StructType* type_struct = llvm::StructType::create(context, "type_" + identifier);
@@ -153,7 +153,7 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationC
 antlrcpp::Any CodeGenVisitor::visitIdentifierList(PascalSParser::IdentifierListContext* ctx) {
     // Generate LLVM IR for identifier list
     std::vector<std::string> identifiers;
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     identifiers.push_back(identifier);
 
     if (ctx->identifierList() != nullptr) {
