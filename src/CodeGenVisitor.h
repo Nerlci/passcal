@@ -20,6 +20,7 @@ public:
     CodeGenVisitor();
 
     antlrcpp::Any visitProgramHead(PascalSParser::ProgramHeadContext* ctx) override;
+    antlrcpp::Any visitProgramBody(PascalSParser::ProgramBodyContext* ctx) override;
 
     antlrcpp::Any visitConstDeclaration(PascalSParser::ConstDeclarationContext* ctx) override;
     antlrcpp::Any visitConstVariable(PascalSParser::ConstVariableContext* ctx) override;
@@ -31,7 +32,7 @@ public:
     antlrcpp::Any visitIdentifierList(PascalSParser::IdentifierListContext* ctx) override;
 
     antlrcpp::Any visitType(PascalSParser::TypeContext* ctx) override;
-    antlrcpp::Any visitRecordBody(PascalSParser::RecordBodyContext* ctx) override;
+    // antlrcpp::Any visitRecordBody(PascalSParser::RecordBodyContext* ctx) override;
     antlrcpp::Any visitPeriods(PascalSParser::PeriodsContext* ctx) override;
     antlrcpp::Any visitPeriod(PascalSParser::PeriodContext* ctx) override;
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
