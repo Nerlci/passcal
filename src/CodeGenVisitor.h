@@ -16,10 +16,13 @@ public:
     IRBuilder<> builder;
     std::unique_ptr<Module> module;
     Scope* scope = new Scope();
+    std::string filename;
 
     CodeGenVisitor();
+    CodeGenVisitor(const std::string& filename);
 
     antlrcpp::Any visitProgramHead(PascalSParser::ProgramHeadContext* ctx) override;
+    antlrcpp::Any visitProgramBody(PascalSParser::ProgramBodyContext* ctx) override;
 
     antlrcpp::Any visitConstDeclaration(PascalSParser::ConstDeclarationContext* ctx) override;
     antlrcpp::Any visitConstVariable(PascalSParser::ConstVariableContext* ctx) override;
@@ -31,7 +34,7 @@ public:
     antlrcpp::Any visitIdentifierList(PascalSParser::IdentifierListContext* ctx) override;
 
     antlrcpp::Any visitType(PascalSParser::TypeContext* ctx) override;
-    antlrcpp::Any visitRecordBody(PascalSParser::RecordBodyContext* ctx) override;
+    // antlrcpp::Any visitRecordBody(PascalSParser::RecordBodyContext* ctx) override;
     antlrcpp::Any visitPeriods(PascalSParser::PeriodsContext* ctx) override;
     antlrcpp::Any visitPeriod(PascalSParser::PeriodContext* ctx) override;
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
@@ -39,6 +42,9 @@ public:
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
     antlrcpp::Any visitSubprogramDeclarations(PascalSParser::SubprogramDeclarationsContext* ctx) override;
     antlrcpp::Any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext *ctx) override;
+
+    Value* getArrayElement(Value* array, std::vector<Value*> index);
+    Value* getRecordElement(Value* record, std::string& field);
 
     // Declare other visit methods as needed
 };

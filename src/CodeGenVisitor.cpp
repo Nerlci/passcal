@@ -1,12 +1,18 @@
 #include "CodeGenVisitor.h"
+#include "Exception/SemanticException.h"
 
 CodeGenVisitor::CodeGenVisitor()
     : builder(context) {
 }
 
+CodeGenVisitor::CodeGenVisitor(const std::string& filename)
+    : builder(context)
+    , filename(filename) {
+}
+
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
     // Create a new LLVM module
-    auto program_id_node = ctx->identifier();
+    auto program_id_node = ctx->ID();
     std::string program_name = program_id_node->getText();
     module = std::make_unique<Module>(program_name, context);
 
@@ -19,13 +25,23 @@ antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext
     return visitChildren(ctx);
 }
 
+antlrcpp::Any CodeGenVisitor::visitProgramBody(PascalSParser::ProgramBodyContext* ctx) {
+    visitChildren(ctx);
+
+    // Return 0 at the end of the program
+    // TODO: Return different values for procedures and functions
+    builder.CreateRet(ConstantInt::get(Type::getInt32Ty(context), 0));
+
+    return nullptr;
+}
+
 antlrcpp::Any CodeGenVisitor::visitConstDeclaration(PascalSParser::ConstDeclarationContext* ctx) {
     // Generate LLVM IR for constant declaration
     if (ctx->constDeclaration() != nullptr) {
         visit(ctx->constDeclaration());
     }
 
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     llvm::Value* value = std::any_cast<llvm::Value*>(visit(ctx->constVariable()));
 
     module->getOrInsertGlobal(identifier, value->getType());
@@ -43,12 +59,13 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
     // Generate LLVM IR for constant variable
     llvm::Value* value = nullptr;
 
-    if (ctx->identifier() != nullptr) {
-        std::string identifier = ctx->identifier()->getText();
+    if (ctx->ID() != nullptr) {
+        std::string identifier = ctx->ID()->getText();
         auto global = module->getNamedGlobal(identifier);
 
         if (global == nullptr) {
-            // TODO: Handle undeclared identifier
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "'" + identifier + "' was not declared in this scope or is not a constant");
         } else {
             value = (llvm::ConstantInt*)global->getInitializer();
         }
@@ -67,8 +84,8 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
         }
     }
 
-    if (ctx->LETTER() != nullptr) {
-        char letter = ctx->LETTER()->getText()[0];
+    if (ctx->CHARLITERAL() != nullptr) {
+        char letter = ctx->CHARLITERAL()->getText()[1];
         value = ConstantInt::get(context, APInt(8, letter));
     }
 
@@ -81,22 +98,28 @@ antlrcpp::Any CodeGenVisitor::visitTypeDeclaration(PascalSParser::TypeDeclaratio
         visit(ctx->typeDeclaration());
     }
 
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     llvm::Type* type = std::any_cast<llvm::Type*>(visit(ctx->type()));
+
+    llvm::StructType* type_struct = llvm::StructType::create(context, "type_" + identifier);
+    type_struct->setBody(type);
+    auto addr = builder.CreateAlloca(type_struct, nullptr, identifier);
 
     return nullptr;
 }
 
 antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclarationsContext* ctx) {
     // Generate LLVM IR for variable declarations
-    auto var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
+    if (ctx->varDeclaration() != nullptr) {
+        auto var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
 
-    for (const auto& var_declaration : var_declarations) {
-        std::string identifier = var_declaration.first;
-        llvm::Type* type = var_declaration.second;
+        for (const auto& var_declaration : var_declarations) {
+            std::string identifier = var_declaration.first;
+            llvm::Type* type = var_declaration.second;
 
-        auto alloca = builder.CreateAlloca(type, nullptr, identifier);
-        scope->put(identifier, alloca);
+            auto alloca = builder.CreateAlloca(type, nullptr, identifier);
+            scope->put(identifier, alloca);
+        }
     }
 
     return nullptr;
@@ -105,7 +128,6 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclaration
 // @return std::map<std::string, llvm::Type*>
 antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationContext* ctx) {
     // Generate LLVM IR for variable declaration
-    // TODO: Return maps of variable names to types
     std::map<std::string, llvm::Type*> var_declarations;
     if (ctx->varDeclaration() != nullptr) {
         auto prev_var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
@@ -116,6 +138,11 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationC
     auto type = std::any_cast<llvm::Type*>(visit(ctx->type()));
 
     for (const auto& identifier : identifiers) {
+        if (var_declarations.find(identifier) != var_declarations.end()) {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "'" + identifier + "' was already declared in this scope");
+        }
+
         var_declarations[identifier] = type;
     }
 
@@ -126,7 +153,7 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationC
 antlrcpp::Any CodeGenVisitor::visitIdentifierList(PascalSParser::IdentifierListContext* ctx) {
     // Generate LLVM IR for identifier list
     std::vector<std::string> identifiers;
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     identifiers.push_back(identifier);
 
     if (ctx->identifierList() != nullptr) {
@@ -144,7 +171,19 @@ antlrcpp::Any CodeGenVisitor::visitType(PascalSParser::TypeContext* ctx) {
     if (ctx->standardType() != nullptr) {
         type = std::any_cast<llvm::Type*>(visit(ctx->standardType()));
     } else if (ctx->recordBody() != nullptr) {
-        type = std::any_cast<llvm::Type*>(visit(ctx->recordBody()));
+        auto record_body = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->recordBody()));
+
+        std::map<std::string, int> record_names;
+        std::vector<llvm::Type*> record_types;
+        int idx = 0;
+        for (const auto& record : record_body) {
+            record_names.insert({ record.first, idx++ });
+            record_types.push_back(record.second);
+        }
+
+        type = llvm::StructType::get(context, record_types);
+
+        scope->putRecord(type, record_names);
     } else if (ctx->ARRAY() != nullptr) {
         auto array_type_content = std::any_cast<llvm::Type*>(visit(ctx->type()));
         auto array_period = std::any_cast<std::vector<std::pair<int, int>>>(visit(ctx->periods()));
@@ -153,10 +192,11 @@ antlrcpp::Any CodeGenVisitor::visitType(PascalSParser::TypeContext* ctx) {
             int start = period->first;
             int end = period->second;
             array_type_content = ArrayType::get(array_type_content, end - start + 1);
-            std::cout << start << " " << end << std::endl;
         }
 
         type = array_type_content;
+
+        scope->putArray(type, array_period);
     }
 
     return type;
@@ -186,33 +226,6 @@ antlrcpp::Any CodeGenVisitor::visitPeriod(PascalSParser::PeriodContext* ctx) {
     int end = end_const->getUniqueInteger().getLimitedValue();
 
     return std::make_pair(start, end);
-}
-
-antlrcpp::Any CodeGenVisitor::visitRecordBody(PascalSParser::RecordBodyContext* ctx) {
-    // Generate LLVM IR for record body
-    llvm::StructType* record = nullptr;
-    if (ctx->varDeclaration() != nullptr) {
-        auto var_declaration = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
-        // std::vector<llvm::Type*> elements;
-
-        // if (ctx->recordSection() != nullptr) {
-        //     auto record_sections = ctx->recordSection();
-        //     for (auto record_section : record_sections) {
-        //         auto identifiers = std::any_cast<std::vector<std::string>>(visit(record_section->identifierList()));
-        //         auto type = std::any_cast<llvm::Type*>(visit(record_section->type()));
-
-        //         for (const auto& identifier : identifiers) {
-        //             elements.push_back(type);
-        //         }
-        //     }
-        // }
-
-        // record = llvm::StructType::create(context, elements, "record");
-    } else {
-        record = llvm::StructType::create(context, "record");
-    }
-
-    return record;
 }
 
 // @return llvm::Type*
@@ -258,3 +271,34 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
 }
 
 // Implement other visit methods as needed
+
+Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
+    // Generate LLVM IR for getting array element
+    Type* array_type = ((AllocaInst*)array)->getAllocatedType();
+    std::vector<std::pair<int, int>> array_info = scope->getArray(array_type);
+    // if (array_info.size() != index.size()) {
+    //     throw SemanticException(filename, 0, 0, "Array index count mismatch");
+    // }
+
+    std::vector<Value*> offsetted_indices;
+    for (int i = 0; i < array_info.size(); i++) {
+        Value* start = ConstantInt::get(context, APInt(32, array_info[i].first));
+        Value* offset = builder.CreateSub(index[i], start);
+        offsetted_indices.push_back(offset);
+    }
+
+    return builder.CreateGEP(array_type, array, offsetted_indices);
+}
+
+Value* CodeGenVisitor::getRecordElement(Value* record, std::string& field) {
+    // Generate LLVM IR for getting record element
+    Type* record_type = ((AllocaInst*)record)->getAllocatedType();
+    std::map<std::string, int> record_info = scope->getRecord(record_type);
+    int index = record_info[field];
+
+    // if (index == -1) {
+    //     throw SemanticException(filename, 0, 0, "Field '" + field + "' not found in record");
+    // }
+
+    return builder.CreateStructGEP(record_type, record, index);
+}

@@ -223,10 +223,6 @@ public:
     return visitChildren(ctx);
   }
 
-  virtual std::any visitIdentifier(PascalSParser::IdentifierContext *ctx) override {
-    return visitChildren(ctx);
-  }
-
   virtual std::any visitRelationalOpreator(PascalSParser::RelationalOpreatorContext *ctx) override {
     return visitChildren(ctx);
   }
