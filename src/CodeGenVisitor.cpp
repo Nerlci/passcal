@@ -276,8 +276,14 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
         // TODO: 如果变量未声明或不是标识符，需要报错
     } else if (ctx->NUM()) {
         // 处理NUM
-        int numValue = std::stoi(ctx->NUM()->getText());
-        value = builder.getInt32(numValue);
+        std::string num_str = ctx->NUM()->getText();
+        if (num_str.find('.') != std::string::npos || num_str.find('E') != std::string::npos || num_str.find('e') != std::string::npos) {
+            double num = std::stod(num_str);
+            value = llvm::ConstantFP::get(context, llvm::APFloat(num));
+        } else {
+            int num = std::stoi(num_str);
+            value = llvm::ConstantInt::get(context, llvm::APInt(32, num));
+        }
     } else if (ctx->LETTER()) {
         // 处理QUOTE LETTER QUOTE
         char letterValue = ctx->LETTER()->getText()[0];
