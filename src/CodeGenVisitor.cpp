@@ -3,13 +3,11 @@
 #include "PascalSParser.h"
 
 CodeGenVisitor::CodeGenVisitor()
-    : builder(context)
-    , current_return_type(nullptr) {
+    : builder(context) {
 }
 
 CodeGenVisitor::CodeGenVisitor(const std::string& filename)
     : builder(context)
-    , current_return_type(nullptr)
     , filename(filename) {
 }
 
@@ -26,17 +24,12 @@ antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext
 }
 
 antlrcpp::Any CodeGenVisitor::visitProgramBody(PascalSParser::ProgramBodyContext* ctx) {
-    visitChildren(ctx);
-    if (current_return_type) { // in a sub program
-        builder.CreateRet(ConstantInt::get(current_return_type, 0));
-    } else { // in main function
-        builder.CreateRet(ConstantInt::get(Type::getInt32Ty(context), 0));
-    }
-    return nullptr;
+    auto res = visitChildren(ctx);
+    builder.CreateRet(ConstantInt::get(current_return_type, 0));
+    return res;
 }
 
 antlrcpp::Any CodeGenVisitor::visitConstDeclaration(PascalSParser::ConstDeclarationContext* ctx) {
-    // Generate LLVM IR for constant declaration
     if (ctx->constDeclaration() != nullptr) {
         visit(ctx->constDeclaration());
     }
@@ -56,7 +49,6 @@ antlrcpp::Any CodeGenVisitor::visitConstDeclaration(PascalSParser::ConstDeclarat
 
 // @return llvm::Value*
 antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableContext* ctx) {
-    // Generate LLVM IR for constant variable
     llvm::Value* value = nullptr;
 
     if (ctx->ID() != nullptr) {
@@ -93,7 +85,6 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
 }
 
 antlrcpp::Any CodeGenVisitor::visitTypeDeclaration(PascalSParser::TypeDeclarationContext* ctx) {
-    // Generate LLVM IR for type declaration
     if (ctx->typeDeclaration() != nullptr) {
         visit(ctx->typeDeclaration());
     }
@@ -109,7 +100,6 @@ antlrcpp::Any CodeGenVisitor::visitTypeDeclaration(PascalSParser::TypeDeclaratio
 }
 
 antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclarationsContext* ctx) {
-    // Generate LLVM IR for variable declarations
     if (ctx->varDeclaration() != nullptr) {
         auto var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
 
@@ -127,7 +117,6 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclaration
 
 // @return std::map<std::string, llvm::Type*>
 antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationContext* ctx) {
-    // Generate LLVM IR for variable declaration
     std::map<std::string, llvm::Type*> var_declarations;
     if (ctx->varDeclaration() != nullptr) {
         auto prev_var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
@@ -151,7 +140,6 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationC
 
 // @return std::vector<std::string>
 antlrcpp::Any CodeGenVisitor::visitIdentifierList(PascalSParser::IdentifierListContext* ctx) {
-    // Generate LLVM IR for identifier list
     std::vector<std::string> identifiers;
     std::string identifier = ctx->ID()->getText();
     identifiers.push_back(identifier);
@@ -166,7 +154,6 @@ antlrcpp::Any CodeGenVisitor::visitIdentifierList(PascalSParser::IdentifierListC
 
 // @return llvm::Type*
 antlrcpp::Any CodeGenVisitor::visitType(PascalSParser::TypeContext* ctx) {
-    // Generate LLVM IR for type
     llvm::Type* type = nullptr;
     if (ctx->standardType() != nullptr) {
         type = std::any_cast<llvm::Type*>(visit(ctx->standardType()));
@@ -204,7 +191,6 @@ antlrcpp::Any CodeGenVisitor::visitType(PascalSParser::TypeContext* ctx) {
 
 // @return std::vector<std::pair<int, int>>
 antlrcpp::Any CodeGenVisitor::visitPeriods(PascalSParser::PeriodsContext* ctx) {
-    // Generate LLVM IR for periods
     std::vector<std::pair<int, int>> periods;
     if (ctx->periods() != nullptr) {
         auto next_periods = std::any_cast<std::vector<std::pair<int, int>>>(visit(ctx->periods()));
@@ -219,7 +205,6 @@ antlrcpp::Any CodeGenVisitor::visitPeriods(PascalSParser::PeriodsContext* ctx) {
 
 // @return std::pair<int, int>
 antlrcpp::Any CodeGenVisitor::visitPeriod(PascalSParser::PeriodContext* ctx) {
-    // Generate LLVM IR for period
     auto start_const = (llvm::Constant*)std::any_cast<llvm::Value*>(visit(ctx->constVariable(0)));
     auto end_const = (llvm::Constant*)std::any_cast<llvm::Value*>(visit(ctx->constVariable(1)));
     int start = start_const->getUniqueInteger().getLimitedValue();
@@ -230,7 +215,6 @@ antlrcpp::Any CodeGenVisitor::visitPeriod(PascalSParser::PeriodContext* ctx) {
 
 // @return llvm::Type*
 antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeContext* ctx) {
-    // Generate LLVM IR for standard type
     llvm::Type* type = nullptr;
     if (ctx->INTEGER() != nullptr) {
         type = Type::getInt32Ty(context);
@@ -243,28 +227,11 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
     } else {
         type = Type::getVoidTy(context);
     }
-
     return type;
 }
 
 antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* ctx) {
-    // Generate LLVM IR for expression
     return visitChildren(ctx);
-}
-
-llvm::Type* mapPascalTypeToLLVM(const std::string& pascalType, llvm::LLVMContext& context) {
-    if (pascalType == "integer") {
-        return llvm::Type::getInt32Ty(context);
-    } else if (pascalType == "boolean") {
-        return llvm::Type::getInt1Ty(context);
-    } else if (pascalType == "real") {
-        return llvm::Type::getDoubleTy(context);
-    } else if (pascalType == "char") {
-        return llvm::Type::getInt8Ty(context);
-    } else {
-        throw SemanticException("Unknown type: " + pascalType);
-        return nullptr;
-    }
 }
 
 // @return nullptr
@@ -293,7 +260,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
                 throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
                     "Parameter list must be either a value or var parameter");
             }
-            llvm::Type* param_list_type = mapPascalTypeToLLVM(value_parameter->standardType()->getText(), context);
+            llvm::Type* param_list_type = std::any_cast<llvm::Type*>(visitStandardType(value_parameter->standardType()));
             std::vector<antlr4::tree::TerminalNode*> ident_list_vec;
             auto ptr = value_parameter->identifierList();
             while (ptr->identifierList() != nullptr) {
@@ -308,7 +275,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
         }
         if (ctx->subprogramHead()->PROCEDURE() != nullptr) {
         } else if (ctx->subprogramHead()->FUNCTION() != nullptr) {
-            return_type = mapPascalTypeToLLVM(ctx->subprogramHead()->standardType()->getText(), context);
+            return_type = std::any_cast<llvm::Type*>(visitStandardType(ctx->subprogramHead()->standardType()));
         } else {
             throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
                 "Subprogram declaration must be either a function or a procedure");
@@ -333,10 +300,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
     return res;
 }
 
-// Implement other visit methods as needed
-
 Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
-    // Generate LLVM IR for getting array element
     Type* array_type = ((AllocaInst*)array)->getAllocatedType();
     std::vector<std::pair<int, int>> array_info = scope->getArray(array_type);
     // if (array_info.size() != index.size()) {
@@ -354,7 +318,6 @@ Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) 
 }
 
 Value* CodeGenVisitor::getRecordElement(Value* record, std::string& field) {
-    // Generate LLVM IR for getting record element
     Type* record_type = ((AllocaInst*)record)->getAllocatedType();
     std::map<std::string, int> record_info = scope->getRecord(record_type);
     int index = record_info[field];

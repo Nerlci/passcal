@@ -16,7 +16,7 @@ public:
     IRBuilder<> builder;
     std::unique_ptr<Module> module;
     Scope* scope = new Scope();
-    llvm::Type* current_return_type;
+    llvm::Type* current_return_type = Type::getInt32Ty(context);
     std::string filename;
 
     CodeGenVisitor();
