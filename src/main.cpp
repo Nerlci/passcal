@@ -1,3 +1,12 @@
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/MC/TargetRegistry.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/TargetSelect.h>
+#include <llvm/Target/TargetMachine.h>
+#include <llvm/TargetParser/Host.h>
+
+#include <getopt.h>
+
 #include "CodeGenVisitor.h"
 #include "PascalSLexer.h"
 #include "PascalSParser.h"
@@ -9,29 +18,20 @@ int main(int argc, const char* argv[]) {
         std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
         return 1;
     }
+    std::string filename = argv[1];
+    std::ifstream stream;
+    stream.open(filename);
+    ANTLRInputStream input(stream);
+    PascalSLexer lexer(&input);
+    CommonTokenStream tokens(&lexer);
+    PascalSParser parser(&tokens);
 
-    try {
-        std::string filename = argv[1];
-        std::ifstream stream;
-        stream.open(filename);
-        ANTLRInputStream input(stream);
-        PascalSLexer lexer(&input);
-        CommonTokenStream tokens(&lexer);
-        PascalSParser parser(&tokens);
+    tree::ParseTree* tree = parser.program();
 
-        tree::ParseTree* tree = parser.program();
+    CodeGenVisitor codeGen;
+    codeGen.visit(tree);
 
-        CodeGenVisitor codeGen;
-        codeGen.visit(tree);
-
-        codeGen.module->print(outs(), nullptr);
-    } catch (const std::bad_any_cast& e) {
-        std::cerr << "Caught std::bad_any_cast: " << e.what() << std::endl;
-        return 1;
-    } catch (const std::exception& e) {
-        std::cerr << "Caught std::exception: " << e.what() << std::endl;
-        return 1;
-    }
-
+    codeGen.module->print(outs(), nullptr);
+    
     return 0;
 }
