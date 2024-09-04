@@ -13,6 +13,8 @@ antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext
 }
 
 antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) {
+    Value* value = nullptr;
+
     if (ctx->ID()) {
         std::string varName = ctx->ID()->getText();
         Value* var = module->getNamedGlobal(varName);
@@ -22,17 +24,17 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
         if (num_text.find('.') != std::string::npos || num_text.find('E') != std::string::npos) {
             // 浮点数
             double num_value = std::stod(num_text);
-            return ConstantFP::get(context, APFloat(num_value));
+            value = ConstantFP::get(context, APFloat(num_value));
         } else {
             // 整数
             int num_value = std::stoi(num_text);
-            return builder.getInt32(num_value);
+            value = builder.getInt32(num_value);
         }
     } else if (!ctx->QUOTE().empty()) {
         char char_value = ctx->LETTER()->getText()[0];
-        return builder.getInt8(char_value);
+        value = builder.getInt8(char_value);
     }
-    return nullptr;
+    return value;
 }
 
 antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
