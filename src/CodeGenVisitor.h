@@ -47,7 +47,7 @@ public:
     antlrcpp::Any visitPeriods(PascalSParser::PeriodsContext* ctx) override;
     antlrcpp::Any visitPeriod(PascalSParser::PeriodContext* ctx) override;
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
-
+    antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) override;
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
     antlrcpp::Any visitIfStatement(PascalSParser::IfStatementContext* ctx) override;
     antlrcpp::Any visitForStatement(PascalSParser::ForStatementContext* ctx) override;
