@@ -20,8 +20,14 @@ int main(int argc, const char* argv[]) {
 
     tree::ParseTree* tree = parser.program();
 
-    CodeGenVisitor codeGen;
-    codeGen.visit(tree);
+    CodeGenVisitor codeGen(filename);
+
+    try {
+        codeGen.visit(tree);
+    } catch (const std::exception& e) {
+        llvm::errs() << e.what() << "\n";
+        return 1;
+    }
 
     codeGen.module->print(outs(), nullptr);
 
