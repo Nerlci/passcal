@@ -236,7 +236,7 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
 
 antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* ctx) {
     // return: llvm::Value*
-
+//    std::cout << "Visiting expression: " << ctx->getText() << std::endl;
     llvm::Value* value = nullptr;
     if (ctx->relationalOpreator()) {
         llvm::Value* left = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
@@ -257,6 +257,8 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
             value = builder.CreateICmpSGE(left, right, "getmp");
         }
     } else {
+
+//        std::cout << "end expr" << std::endl;
         value = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
     }
     return value;
@@ -264,28 +266,30 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
 
 antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) {
     //return: llvm::Value*
+    Value* value = nullptr;
+//    std::cout << "unsignConsVar" << std::endl;
     if (ctx->identifier()) {
         // 处理ID
         std::string varName = ctx->identifier()->getText();
         // 假设变量已经声明并在符号表中可用
-        Value* var = scope->get(varName);
+        value = scope->get(varName);
         // TODO: 如果变量未声明或不是标识符，需要报错
-        return var;
     } else if (ctx->NUM()) {
         // 处理NUM
         int numValue = std::stoi(ctx->NUM()->getText());
-        return builder.getInt32(numValue);
+        value = builder.getInt32(numValue);
     } else if (ctx->LETTER()) {
         // 处理QUOTE LETTER QUOTE
         char letterValue = ctx->LETTER()->getText()[0];
-        return builder.getInt8(letterValue);
+        value = builder.getInt8(letterValue);
     }
-    return nullptr;
+//    std::cout << "end unsignConsVar" << std::endl;
+    return value;
 }
 
 antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
     //return: llvm::Value*
-
+//    std::cout << "factor" << std::endl;
     Value* value = nullptr;
     if(ctx->unsignConstVariable()){
         value = std::any_cast<llvm::Value *>(visit(ctx->unsignConstVariable()));
@@ -312,11 +316,13 @@ antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
     } else if(ctx->boolean()){
         value = std::any_cast<llvm::Value*>(visit(ctx->boolean()));
     }
+//    std::cout << "end factor" << std::endl;
     return value;
 }
 
 antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx){
     // return: llvm::Value*
+//    std::cout << "term" << std::endl;
     Value* value = nullptr;
     if(ctx->multiplyOperator()){
         Value* left = std::any_cast<llvm::Value*>(visit(ctx->term()));
@@ -335,6 +341,7 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx){
     } else {
         value = std::any_cast<llvm::Value*>(visit(ctx->factor()));
     }
+//    std::cout << "end term" << std::endl;
     return value;
 }
 
@@ -350,7 +357,7 @@ antlrcpp::Any CodeGenVisitor::visitBoolean(PascalSParser::BooleanContext* ctx) {
 
 antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx){
     // return: llvm::Value*
-
+//    std::cout << "simpleExp" << std::endl;
     Value* value = nullptr;
     if(ctx->PLUS()||ctx->MINUS()){
         Value* termValue = std::any_cast<llvm::Value*>(visit(ctx->term()));
@@ -381,6 +388,7 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
     } else{
         value = std::any_cast<llvm::Value*>(visit(ctx->term()));
     }
+//    std::cout << "end simpleExp" << std::endl;
     return value;
 }
 
