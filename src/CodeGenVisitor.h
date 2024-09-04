@@ -2,6 +2,7 @@
 #define CODEGENVISITOR_H
 
 #include "PascalSBaseVisitor.h"
+#include "Scope.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -14,10 +15,18 @@ public:
     LLVMContext context;
     IRBuilder<> builder;
     std::unique_ptr<Module> module;
+    Scope* scope = new Scope();
 
     CodeGenVisitor();
 
     antlrcpp::Any visitProgramHead(PascalSParser::ProgramHeadContext* ctx) override;
+
+    antlrcpp::Any visitConstDeclaration(PascalSParser::ConstDeclarationContext* ctx) override;
+    antlrcpp::Any visitVarDeclaration(PascalSParser::VarDeclarationContext* ctx) override;
+    antlrcpp::Any visitIdentifierList(PascalSParser::IdentifierListContext* ctx) override;
+    antlrcpp::Any visitType(PascalSParser::TypeContext* ctx) override;
+    antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
+
 //    antlrcpp::Any visitVariable(PascalSParser::VariableContext* ctx) override;
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
     antlrcpp::Any visitTerm(PascalSParser::TermContext* ctx) override;
