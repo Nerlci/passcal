@@ -413,12 +413,34 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
 
 antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
     // return: llvm::Value*
-    Value* value = scope->get(ctx->identifier()->getText());
 
-    for(auto varpart : ctx->idVarparts()->idVarpart()){
+    // Retrieve the base identifier
+    std::string varName = ctx->identifier()->getText();
+    llvm::Value* value = scope->get(varName);
 
+    // Retrieve the IdVarpartsContext
+    PascalSParser::IdVarpartsContext* idVarpartsCtx = ctx->idVarparts();
+
+    // Process each IdVarpartContext
+    for (size_t i = 0; i < idVarpartsCtx->children.size(); ++i) {
+        auto idVarpartCtx = dynamic_cast<PascalSParser::IdVarpartContext*>(idVarpartsCtx->children[i]);
+        if (idVarpartCtx) {
+            if (idVarpartCtx->LBRACKET()) {
+//                // Handle array element access
+//                std::vector<Value*> index;
+//                for (auto& expr : idVarpartCtx->expression()) {
+//                    index.push_back(std::any_cast<llvm::Value*>(visit(expr)));
+//                }
+
+            } else if (idVarpartCtx->DOT()) {
+                // Handle record field access
+                std::string fieldName = idVarpartCtx->identifier()->getText();
+                value = getRecordElement(value, fieldName);
+            }
+        }
     }
 
+    return value;
 }
 
 // Implement other visit methods as needed

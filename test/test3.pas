@@ -9,8 +9,6 @@ var
             y: real
     end;
 begin
-    arr[1] := 10;
-    rec.x := 15;
     a := 10;
     b := 20;
     c := a + b;
@@ -32,4 +30,6 @@ begin
     flag := (a < b) or (x < y);
 
     flag := a <> b;
+    arr[1] := 10;
+    rec.x := 15;
 end.
