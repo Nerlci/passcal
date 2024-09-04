@@ -239,4 +239,22 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
     return visitChildren(ctx);
 }
 
+antlrcpp::Any CodeGenVisitor::visitSubprogramDeclarations(PascalSParser::SubprogramDeclarationsContext* ctx) {
+    // if (ctx->subprogramDeclarations() != nullptr) {
+    //     std::cout << "================Visit sub-program declarations" << std::endl;
+    //     std::cout << ctx->getText() << std::endl;
+    //     std::cout << ctx->toStringTree(nullptr, true) << std::endl;
+    //     std::cout << "============end Visit sub-program declarations" << std::endl;
+    // } else {
+    // }
+    return visitChildren(ctx);
+}
+
+antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) {
+    std::cout << "================Visit sub-program declaration" << std::endl;
+    std::cout << ctx->getText() << std::endl;
+    std::cout << "============end Visit sub-program declaration" << std::endl;
+    return visitChildren(ctx);
+}
+
 // Implement other visit methods as needed

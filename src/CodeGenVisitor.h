@@ -37,6 +37,8 @@ public:
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
 
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
+    antlrcpp::Any visitSubprogramDeclarations(PascalSParser::SubprogramDeclarationsContext* ctx) override;
+    antlrcpp::Any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext *ctx) override;
 
     // Declare other visit methods as needed
 };
