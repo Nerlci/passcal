@@ -242,7 +242,7 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
 antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) {
     if (ctx->identifier()) {
         // 处理ID
-        std::string varName = ->identifier()->getText();
+        std::string varName = ctx->identifier()->getText();
         // 假设变量已经声明并在符号表中可用
         Value* var = module->getNamedValue(varName);
         // TODO: 如果变量未声明或不是标识符，需要报错
@@ -257,6 +257,7 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
         return builder.getInt8(letterValue);
     }
     return nullptr;
+    return visitChildren(ctx);
 }
 
 //antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext *ctx) {
