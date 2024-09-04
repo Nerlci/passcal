@@ -240,9 +240,9 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
 }
 
 antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) {
-    if (ctx->ID()) {
+    if (ctx->identifier()) {
         // 处理ID
-        std::string varName = ctx->ID()->getText();
+        std::string varName = ->identifier()->getText();
         // 假设变量已经声明并在符号表中可用
         Value* var = module->getNamedValue(varName);
         // TODO: 如果变量未声明或不是标识符，需要报错
@@ -259,73 +259,73 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
     return nullptr;
 }
 
-antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext *ctx) {
-    if (ctx->unsignConstVariable()) {
-        return visitUnsignConstVariable(ctx->unsignConstVariable());
-    } else if (ctx->variable()) {
-        return visitVariable(ctx->variable());
-    } else if (ctx->ID()) {
-        // Handle ID case
-        return ctx->ID()->getText();
-    } else if (ctx->LPAREN()) {
-        return visitExpression(ctx->expression());
-    } else if (ctx->NOT()) {
-        auto factor = visitFactor(ctx->factor());
-        // Handle NOT operation
-        return !std::any_cast<bool>(factor);
-    } else if (ctx->boolean()) {
-        return visitBoolean(ctx->boolean());
-    }
-    return nullptr;
-}
+//antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext *ctx) {
+//    if (ctx->unsignConstVariable()) {
+//        return visitUnsignConstVariable(ctx->unsignConstVariable());
+//    } else if (ctx->variable()) {
+//        return visitVariable(ctx->variable());
+//    } else if (ctx->ID()) {
+//        // Handle ID case
+//        return ctx->ID()->getText();
+//    } else if (ctx->LPAREN()) {
+//        return visitExpression(ctx->expression());
+//    } else if (ctx->NOT()) {
+//        auto factor = visitFactor(ctx->factor());
+//        // Handle NOT operation
+//        return !std::any_cast<bool>(factor);
+//    } else if (ctx->boolean()) {
+//        return visitBoolean(ctx->boolean());
+//    }
+//    return nullptr;
+//}
 
-antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext *ctx) {
-    if(!ctx->MULOP()){
-        return visitFactor(ctx->factor());
-    }
-    auto L = visitTerm(ctx->term());
-    auto R = visitFactor(ctx->factor());
-    if(ctx->MULOP()->getText() == "*"){
-        return builder.CreateMul(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"multmp");
-    } else if(ctx->MULOP()->getText() == "/"){
-        return builder.CreateSDiv(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"divtmp");
-    } else if(ctx->MULOP()->getText() == "div"){
-        return builder.CreateSDiv(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"divtmp");
-    } else if(ctx->MULOP()->getText() == "mod"){
-        return builder.CreateSRem(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"modtmp");
-    } else if(ctx->MULOP()->getText() == "and"){
-        return builder.CreateAnd(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"andtmp");
-    }
-}
+//antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext *ctx) {
+//    if(!ctx->MULOP()){
+//        return visitFactor(ctx->factor());
+//    }
+//    auto L = visitTerm(ctx->term());
+//    auto R = visitFactor(ctx->factor());
+//    if(ctx->MULOP()->getText() == "*"){
+//        return builder.CreateMul(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"multmp");
+//    } else if(ctx->MULOP()->getText() == "/"){
+//        return builder.CreateSDiv(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"divtmp");
+//    } else if(ctx->MULOP()->getText() == "div"){
+//        return builder.CreateSDiv(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"divtmp");
+//    } else if(ctx->MULOP()->getText() == "mod"){
+//        return builder.CreateSRem(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"modtmp");
+//    } else if(ctx->MULOP()->getText() == "and"){
+//        return builder.CreateAnd(std::any_cast<llvm::Value *>(L),std::any_cast<llvm::Value *>(R),"andtmp");
+//    }
+//}
 
-antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext *ctx) {
-    if(!ctx->ADDOP()){
-        return visit(ctx->term());
-    }
-    else if(ctx->ADDOP()) {
-        auto left = visit(ctx->simpleExpression());
-        auto right = visit(ctx->term());
-        Value *leftvalue = std::any_cast<llvm::Value *>(left);
-        Value *rightvalue = std::any_cast<llvm::Value *>(right);
-        if (ctx->ADDOP()->getText() == "+") {
-            return builder.CreateAdd(leftvalue, rightvalue, "addtmp");
-        } else if (ctx->ADDOP()->getText() == "-") {
-            return builder.CreateSub(leftvalue, rightvalue, "subtmp");
-        } else if (ctx->ADDOP()->getText() == "or") {
-            return builder.CreateOr(leftvalue, rightvalue, "ortmp");
-        }
-    }
-    else if(ctx->PLUS()||ctx->MINUS()){
-        auto termValue = visit(ctx->term());
-        Value* termValue1 = std::any_cast<llvm::Value *>(termValue);
-        if(ctx->PLUS()) {
-            return termValue1;
-        } else if(ctx->MINUS()){
-            return builder.CreateNeg(termValue1,"negtmp");
-        }
-    }
-    return nullptr;
-}
+//antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext *ctx) {
+//    if(!ctx->ADDOP()){
+//        return visit(ctx->term());
+//    }
+//    else if(ctx->ADDOP()) {
+//        auto left = visit(ctx->simpleExpression());
+//        auto right = visit(ctx->term());
+//        Value *leftvalue = std::any_cast<llvm::Value *>(left);
+//        Value *rightvalue = std::any_cast<llvm::Value *>(right);
+//        if (ctx->ADDOP()->getText() == "+") {
+//            return builder.CreateAdd(leftvalue, rightvalue, "addtmp");
+//        } else if (ctx->ADDOP()->getText() == "-") {
+//            return builder.CreateSub(leftvalue, rightvalue, "subtmp");
+//        } else if (ctx->ADDOP()->getText() == "or") {
+//            return builder.CreateOr(leftvalue, rightvalue, "ortmp");
+//        }
+//    }
+//    else if(ctx->PLUS()||ctx->MINUS()){
+//        auto termValue = visit(ctx->term());
+//        Value* termValue1 = std::any_cast<llvm::Value *>(termValue);
+//        if(ctx->PLUS()) {
+//            return termValue1;
+//        } else if(ctx->MINUS()){
+//            return builder.CreateNeg(termValue1,"negtmp");
+//        }
+//    }
+//    return nullptr;
+//}
 
 //antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) {
 //    if (ctx->term()) {
