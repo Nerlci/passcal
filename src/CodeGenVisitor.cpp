@@ -56,11 +56,11 @@ antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
 }
 
 antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
-    Value* result = llvm::dyn_cast<Value*>(visit(ctx->factor()));
+    Value* result = std::any_cast<Value*>(visit(ctx->factor()));
 
     if (ctx->term()) {
 
-        Value* nextTerm = llvm::cast<Value*>(visit(ctx->term()));
+        Value* nextTerm = std::any_cast<Value*>(visit(ctx->term()));
 
         if (ctx->MULOP()->getText() == "*") {
             result = builder.CreateMul(result, nextTerm, "multmp");
@@ -80,10 +80,10 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
 
 // 处理简单表达式
 antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) {
-    Value* result = llvm::cast<Value*>(visit(ctx->term()));
+    Value* result = std::any_cast<Value*>(visit(ctx->term()));
 
     if (ctx->simpleExpression()) {
-        Value* nextSimpleExpr = llvm::cast<Value*>(visit(ctx->simpleExpression()));
+        Value* nextSimpleExpr = std::any_cast<Value*>(visit(ctx->simpleExpression()));
 
         if (ctx->ADDOP()->getText() == "+") {
             result = builder.CreateAdd(result, nextSimpleExpr, "addtmp");
@@ -103,10 +103,10 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
 
 // 处理表达式
 antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* ctx) {
-    Value* lhs = llvm::cast<Value*>(visit(ctx->simpleExpression(0)));
+    Value* lhs = std::any_cast<Value*>(visit(ctx->simpleExpression(0)));
 
     if (ctx->simpleExpression().size() > 1) {
-        Value* rhs = llvm::cast<Value*>(visit(ctx->simpleExpression(1)));
+        Value* rhs = std::any_cast<Value*>(visit(ctx->simpleExpression(1)));
 
         std::string relop = ctx->RELOP()->getText();
 
@@ -132,6 +132,7 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
 
 // 处理赋值语句
 antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::AssignmentStatementContext* ctx) {
+    // todo:数组或者结构体情况
     std::string var_name = ctx->variable()->ID()->getText();
     Value* var = module->getNamedGlobal(var_name);
     Value* expr = std::any_cast<Value*>(visit(ctx->expression()));
@@ -144,25 +145,25 @@ antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::Assignment
     return builder.CreateStore(expr, var);
 }
 
-// todo:处理表达式列表
+//// 处理表达式列表
 //antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListContext* ctx) {
 //
 //}
 
-// 处理函数调用
-antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
-    std::string func_name = ctx->ID()->getText();
-    Function* func = module->getFunction(func_name);
-
-    if (!func) {
-        return nullptr;
-    }
-
-    std::vector<Value*> args;
-    if (ctx->expressionList()) {
-        auto expr_list = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
-        args.insert(args.end(), expr_list.begin(), expr_list.end());
-    }
-
-    return builder.CreateCall(func, args, "calltmp");
-}
+//// 处理函数调用
+//antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
+//    std::string func_name = ctx->ID()->getText();
+//    Function* func = module->getFunction(func_name);
+//
+//    if (!func) {
+//        return nullptr;
+//    }
+//
+//    std::vector<Value*> args;
+//    if (ctx->expressionList()) {
+//        auto expr_list = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
+//        args.insert(args.end(), expr_list.begin(), expr_list.end());
+//    }
+//
+//    return builder.CreateCall(func, args, "calltmp");
+//}
