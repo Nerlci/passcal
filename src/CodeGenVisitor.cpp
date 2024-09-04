@@ -435,12 +435,9 @@ antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx)
         auto idVarpartCtx = dynamic_cast<PascalSParser::IdVarpartContext*>(idVarpartsCtx->children[i]);
         if (idVarpartCtx) {
             if (idVarpartCtx->LBRACKET()) {
-//                // Handle array element access
-//                std::vector<Value*> index;
-//                for (auto& expr : idVarpartCtx->expression()) {
-//                    index.push_back(std::any_cast<llvm::Value*>(visit(expr)));
-//                }
-
+                // Handle array element access
+                std::vector<Value*> index = std::any_cast<std::vector<Value*>>(visit(idVarpartCtx->expressionList()));
+                value = getArrayElement(value, index);
             } else if (idVarpartCtx->DOT()) {
                 // Handle record field access
                 std::string fieldName = idVarpartCtx->identifier()->getText();
