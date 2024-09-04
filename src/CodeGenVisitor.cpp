@@ -1,12 +1,15 @@
 #include "CodeGenVisitor.h"
 #include "Exception/SemanticException.h"
+#include "PascalSParser.h"
 
 CodeGenVisitor::CodeGenVisitor()
-    : builder(context) {
+    : builder(context)
+    , current_return_type(nullptr) {
 }
 
 CodeGenVisitor::CodeGenVisitor(const std::string& filename)
     : builder(context)
+    , current_return_type(nullptr)
     , filename(filename) {
 }
 
@@ -15,23 +18,20 @@ antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext
     auto program_id_node = ctx->ID();
     std::string program_name = program_id_node->getText();
     module = std::make_unique<Module>(program_name, context);
-
-    llvm::FunctionType* mainFuncType = llvm::FunctionType::get(Type::getInt32Ty(context), false);
-    llvm::Function* mainFunc = llvm::Function::Create(mainFuncType, llvm::Function::ExternalLinkage, "main", module.get());
-    llvm::BasicBlock* mainEntry = llvm::BasicBlock::Create(context, "mainEntry", mainFunc);
-
-    builder.SetInsertPoint(mainEntry);
-
+    llvm::FunctionType* main_func_type = llvm::FunctionType::get(Type::getInt32Ty(context), false);
+    llvm::Function* main_func = llvm::Function::Create(main_func_type, llvm::Function::ExternalLinkage, "main", module.get());
+    llvm::BasicBlock* main_entry = llvm::BasicBlock::Create(context, "mainEntry", main_func);
+    builder.SetInsertPoint(main_entry);
     return visitChildren(ctx);
 }
 
 antlrcpp::Any CodeGenVisitor::visitProgramBody(PascalSParser::ProgramBodyContext* ctx) {
     visitChildren(ctx);
-
-    // Return 0 at the end of the program
-    // TODO: Return different values for procedures and functions
-    builder.CreateRet(ConstantInt::get(Type::getInt32Ty(context), 0));
-
+    if (current_return_type) { // in a sub program
+        builder.CreateRet(ConstantInt::get(current_return_type, 0));
+    } else { // in main function
+        builder.CreateRet(ConstantInt::get(Type::getInt32Ty(context), 0));
+    }
     return nullptr;
 }
 
@@ -252,22 +252,85 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
     return visitChildren(ctx);
 }
 
-antlrcpp::Any CodeGenVisitor::visitSubprogramDeclarations(PascalSParser::SubprogramDeclarationsContext* ctx) {
-    // if (ctx->subprogramDeclarations() != nullptr) {
-    //     std::cout << "================Visit sub-program declarations" << std::endl;
-    //     std::cout << ctx->getText() << std::endl;
-    //     std::cout << ctx->toStringTree(nullptr, true) << std::endl;
-    //     std::cout << "============end Visit sub-program declarations" << std::endl;
-    // } else {
-    // }
-    return visitChildren(ctx);
+llvm::Type* mapPascalTypeToLLVM(const std::string& pascalType, llvm::LLVMContext& context) {
+    if (pascalType == "integer") {
+        return llvm::Type::getInt32Ty(context);
+    } else if (pascalType == "boolean") {
+        return llvm::Type::getInt1Ty(context);
+    } else if (pascalType == "real") {
+        return llvm::Type::getDoubleTy(context);
+    } else if (pascalType == "char") {
+        return llvm::Type::getInt8Ty(context);
+    } else {
+        throw SemanticException("Unknown type: " + pascalType);
+        return nullptr;
+    }
 }
 
+// @return nullptr
 antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) {
-    std::cout << "================Visit sub-program declaration" << std::endl;
-    std::cout << ctx->getText() << std::endl;
-    std::cout << "============end Visit sub-program declaration" << std::endl;
-    return visitChildren(ctx);
+    auto sub_program_id_node = ctx->subprogramHead()->ID();
+    std::string sub_program_name = sub_program_id_node->getText();
+    std::vector<llvm::Type*> param_types;
+    llvm::Type* return_type = llvm::Type::getVoidTy(context);
+    if (ctx->subprogramHead()->formalParameter()->parameterLists()) {
+        std::vector<PascalSParser::ParameterListContext*> param_lists_vec;
+        auto ptr = ctx->subprogramHead()->formalParameter()->parameterLists();
+        while (ptr->parameterLists() != nullptr) {
+            param_lists_vec.push_back(ptr->parameterList());
+            ptr = ptr->parameterLists();
+        }
+        param_lists_vec.push_back(ptr->parameterList());
+        // Iterate over each parameter list
+        for (auto& param_list : param_lists_vec) {
+            // Each paramList might have multiple parameters with the same type, e.g., `a, b: integer`
+            PascalSParser::ValueParameterContext* value_parameter = nullptr;
+            if (param_list->varParameter()) {
+                value_parameter = param_list->varParameter()->valueParameter();
+            } else if (param_list->valueParameter()) {
+                value_parameter = param_list->valueParameter();
+            } else {
+                throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                    "Parameter list must be either a value or var parameter");
+            }
+            llvm::Type* param_list_type = mapPascalTypeToLLVM(value_parameter->standardType()->getText(), context);
+            std::vector<antlr4::tree::TerminalNode*> ident_list_vec;
+            auto ptr = value_parameter->identifierList();
+            while (ptr->identifierList() != nullptr) {
+                ident_list_vec.push_back(ptr->ID());
+                ptr = ptr->identifierList();
+            }
+            ident_list_vec.push_back(ptr->ID());
+            for (auto ident : ident_list_vec) {
+                std::string ident_str = ident->getText();
+                param_types.push_back(param_list_type);
+            }
+        }
+        if (ctx->subprogramHead()->PROCEDURE() != nullptr) {
+        } else if (ctx->subprogramHead()->FUNCTION() != nullptr) {
+            return_type = mapPascalTypeToLLVM(ctx->subprogramHead()->standardType()->getText(), context);
+        } else {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "Subprogram declaration must be either a function or a procedure");
+        }
+    }
+    param_types = std::vector<llvm::Type*>(param_types.rbegin(), param_types.rend()); // reverse
+    llvm::FunctionType* sub_program_type = llvm::FunctionType::get(return_type, param_types, false);
+    llvm::Function* sub_program = llvm::Function::Create(sub_program_type, llvm::Function::ExternalLinkage, sub_program_name, module.get());
+    llvm::BasicBlock* sub_program_entry = llvm::BasicBlock::Create(context, ctx->subprogramHead()->ID()->toString(), sub_program);
+    Scope* sub_program_scope = new Scope(scope);
+    auto prev_insert_point = builder.saveIP();
+    auto prev_return_type = current_return_type;
+    auto prev_scope = scope;
+    scope = sub_program_scope;
+    current_return_type = return_type;
+    builder.SetInsertPoint(sub_program_entry);
+    auto res = visitChildren(ctx);
+    scope = prev_scope;
+    current_return_type = prev_return_type;
+    builder.restoreIP(prev_insert_point);
+    // TODO: handle return value of function, needs to collab with callProcedureStatement
+    return res;
 }
 
 // Implement other visit methods as needed

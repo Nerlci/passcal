@@ -16,6 +16,7 @@ public:
     IRBuilder<> builder;
     std::unique_ptr<Module> module;
     Scope* scope = new Scope();
+    llvm::Type* current_return_type;
     std::string filename;
 
     CodeGenVisitor();
@@ -40,8 +41,7 @@ public:
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
 
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
-    antlrcpp::Any visitSubprogramDeclarations(PascalSParser::SubprogramDeclarationsContext* ctx) override;
-    antlrcpp::Any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext *ctx) override;
+    antlrcpp::Any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) override;
 
     Value* getArrayElement(Value* array, std::vector<Value*> index);
     Value* getRecordElement(Value* record, std::string& field);
