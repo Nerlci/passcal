@@ -4,8 +4,8 @@ var
   c:array[1..250] of integer;
 function aorb(a,b:integer):boolean;
   begin
-    if a>b then exit(TRUE)
-      else exit(FALSE);
+    if a>b then aorb:=true
+      else aorb:=false;
   end;
 procedure qsort(l,r:integer);
   var
@@ -36,8 +36,6 @@ procedure ld;
     else x:=abs(a+1-max);
   if abs(b-max)>abs(b-min) then y:=abs(b-min)
     else y:=abs(b-max);
-  if x>y then write(x)
-    else write(y);
   end;
 procedure zj;
   var
@@ -46,12 +44,9 @@ procedure zj;
     ans:=0;
     for i:=1 to n do
       ans:=ans+c[i];
-    write(ans div (n div 2)-c[n div 2]-c[n div 2+1]);
   end;
 begin
-  readln(n,k,a,b);
   for i:=1 to n do
-    read(c[i]);
   qsort(1,n);
   maxp:=0;
   for i:=1 to k do

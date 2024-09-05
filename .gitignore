@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# LLVM intermediate representations
+*.ll
+
 # Compiled Object files
 *.slo
 *.lo
