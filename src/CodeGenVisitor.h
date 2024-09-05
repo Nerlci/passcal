@@ -21,14 +21,17 @@ private:
     LLVMContext context;
     IRBuilder<> builder;
     Scope* scope = new Scope();
+    Scope* subprogramScope = new Scope();
     llvm::Value* current_return_value = ConstantInt::get(context, APInt(32, 0));
     std::string filename;
+    BasicBlock* current_loop_end;
 
 public:
     std::unique_ptr<Module> module;
 
     CodeGenVisitor();
     CodeGenVisitor(const std::string& filename);
+    ~CodeGenVisitor();
 
     antlrcpp::Any visitProgramHead(PascalSParser::ProgramHeadContext* ctx) override;
     antlrcpp::Any visitProgramBody(PascalSParser::ProgramBodyContext* ctx) override;
@@ -47,8 +50,18 @@ public:
     antlrcpp::Any visitPeriods(PascalSParser::PeriodsContext* ctx) override;
     antlrcpp::Any visitPeriod(PascalSParser::PeriodContext* ctx) override;
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
-
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
+
+    antlrcpp::Any visitIfStatement(PascalSParser::IfStatementContext* ctx) override;
+    antlrcpp::Any visitForStatement(PascalSParser::ForStatementContext* ctx) override;
+    antlrcpp::Any visitWhileStatement(PascalSParser::WhileStatementContext* ctx) override;
+    antlrcpp::Any visitRepeatStatement(PascalSParser::RepeatStatementContext* ctx) override;
+    antlrcpp::Any visitStatementList(PascalSParser::StatementListContext* ctx) override;
+    antlrcpp::Any visitCaseStatement(PascalSParser::CaseStatementContext* ctx) override;
+    antlrcpp::Any visitConstList(PascalSParser::ConstListContext* ctx) override;
+    antlrcpp::Any visitBranch(PascalSParser::BranchContext* ctx) override;
+    antlrcpp::Any visitBranchList(PascalSParser::BranchListContext* ctx) override;
+
     antlrcpp::Any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) override;
     antlrcpp::Any visitSubprogramHead(PascalSParser::SubprogramHeadContext* ctx) override;
     antlrcpp::Any visitParameterLists(PascalSParser::ParameterListsContext* ctx) override;

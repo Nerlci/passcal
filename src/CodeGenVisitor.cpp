@@ -11,6 +11,10 @@ CodeGenVisitor::CodeGenVisitor(const std::string& filename)
     , filename(filename) {
 }
 
+CodeGenVisitor::~CodeGenVisitor() {
+    delete scope;
+}
+
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
     // Create a new LLVM module
     auto program_id_node = ctx->ID();
@@ -239,7 +243,267 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
     return type;
 }
 
-// Implement other visit methods as needed
+antlrcpp::Any CodeGenVisitor::visitIfStatement(PascalSParser::IfStatementContext* ctx) {
+    // 访问条件表达式
+    llvm::Value* condition = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+
+    // 创建基本块：then和else
+    llvm::Function* parentFunction = builder.GetInsertBlock()->getParent();
+    llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context, "then", parentFunction);
+    llvm::BasicBlock* elseBB;
+
+    // 检查是否需要else块
+    if (ctx->elsePart()->ELSE() != nullptr) {
+        elseBB = llvm::BasicBlock::Create(context, "else", parentFunction);
+    }
+
+    llvm::BasicBlock* mergeBB = llvm::BasicBlock::Create(context, "endif", parentFunction);
+
+    if (ctx->elsePart()->ELSE() != nullptr) {
+        builder.CreateCondBr(condition, thenBB, elseBB);
+    } else {
+        builder.CreateCondBr(condition, thenBB, mergeBB);
+    }
+
+    // 访问then块
+    builder.SetInsertPoint(thenBB);
+    visit(ctx->statement());
+
+    builder.CreateBr(mergeBB); // 跳转到合并块
+    // thenBB = builder.GetInsertBlock(); // 更新then块
+
+    if (ctx->elsePart()->ELSE() != nullptr) {
+        // 插入else块指令
+        builder.SetInsertPoint(elseBB);
+        visit(ctx->elsePart()->statement()); // 访问else块
+        builder.CreateBr(mergeBB); // 跳转到合并块
+        elseBB = builder.GetInsertBlock(); // 更新else块
+    }
+    // 插入合并块指令
+    builder.SetInsertPoint(mergeBB);
+
+    return nullptr; // 返回结果
+}
+
+antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementContext* ctx) {
+    // 循环变量
+    std::string loopVar = ctx->ID()->getText();
+
+    // Get the initial value
+    Value* initValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(0)));
+
+    // Get the final value
+    Value* finalValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(1)));
+
+    // Determine if it's counting up or down
+    bool countUp = ctx->updown()->getText() == "to";
+
+    // Create basic blocks
+    Function* function = builder.GetInsertBlock()->getParent();
+    BasicBlock* preheaderBB = builder.GetInsertBlock();
+    BasicBlock* loopBB = BasicBlock::Create(context, "loop", function);
+    BasicBlock* afterBB = BasicBlock::Create(context, "afterloop", function);
+
+    // Store the initial value in the loop variable
+    Value* variable = scope->get(loopVar);
+    if (!variable) {
+        // If the variable doesn't exist, create an alloca for it
+        variable = builder.CreateAlloca(builder.getInt32Ty(), nullptr, loopVar);
+        scope->put(loopVar, variable);
+    }
+    builder.CreateStore(initValue, variable);
+
+    // Jump to the loop body
+    builder.CreateBr(loopBB);
+
+    // Start insertion in loop block
+    builder.SetInsertPoint(loopBB);
+
+    // Generate the loop body
+    visit(ctx->statement());
+
+    // Increment or decrement the loop variable
+    Value* currentVar = builder.CreateLoad(builder.getInt32Ty(), variable, loopVar);
+    Value* nextVar = countUp ? builder.CreateAdd(currentVar, ConstantInt::get(context, APInt(32, 1)), "nextvar") : builder.CreateSub(currentVar, ConstantInt::get(context, APInt(32, 1)), "nextvar");
+    builder.CreateStore(nextVar, variable);
+
+    // Compute the end condition
+    Value* endCond = countUp ? builder.CreateICmpSLE(nextVar, finalValue, "loopcond") : builder.CreateICmpSGE(nextVar, finalValue, "loopcond");
+
+    // Create the "after loop" block and insert it
+    builder.CreateCondBr(endCond, loopBB, afterBB);
+
+    // Any new code will be inserted in afterBB
+    builder.SetInsertPoint(afterBB);
+
+    return nullptr;
+}
+
+antlrcpp::Any CodeGenVisitor::visitWhileStatement(PascalSParser::WhileStatementContext* ctx) {
+    Function* function = builder.GetInsertBlock()->getParent();
+
+    // 准备基本块
+    BasicBlock* conditionBB = BasicBlock::Create(context, "while_cond", function);
+    BasicBlock* loopBB = BasicBlock::Create(context, "while_body", function);
+    BasicBlock* afterBB = BasicBlock::Create(context, "while_end", function);
+
+    // 条件块
+    builder.CreateBr(conditionBB);
+    builder.SetInsertPoint(conditionBB);
+
+    // 访问条件表达式
+    Value* condition = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    // 创建条件跳转
+    builder.CreateCondBr(condition, loopBB, afterBB);
+
+    // 循环块
+    builder.SetInsertPoint(loopBB);
+    visit(ctx->statement());
+
+    // 跳转到条件块
+    builder.CreateBr(conditionBB);
+
+    // 结束块
+    builder.SetInsertPoint(afterBB);
+
+    return nullptr;
+}
+
+antlrcpp::Any CodeGenVisitor::visitRepeatStatement(PascalSParser::RepeatStatementContext* ctx) {
+    llvm::Function* function = builder.GetInsertBlock()->getParent();
+
+    // 生成基本块
+    llvm::BasicBlock* loopBB = llvm::BasicBlock::Create(context, "repeat_body", function);
+    llvm::BasicBlock* conditionBB = llvm::BasicBlock::Create(context, "repeat_cond", function);
+    llvm::BasicBlock* afterBB = llvm::BasicBlock::Create(context, "repeat_end", function);
+
+    // Branch to the loop body
+    builder.CreateBr(loopBB);
+
+    // Start insertion in loop block
+    builder.SetInsertPoint(loopBB);
+
+    // 遍历statementList
+    visit(ctx->statementList());
+
+    // Branch to the condition block
+    builder.CreateBr(conditionBB);
+
+    // Start insertion in condition block
+    builder.SetInsertPoint(conditionBB);
+
+    // Generate code for the condition
+    Value* conditionValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+
+    // Create conditional branch
+    // If condition is false (0), continue looping. If true (1), exit the loop.
+    builder.CreateCondBr(conditionValue, afterBB, loopBB);
+
+    // Any new code will be inserted in afterBB
+    builder.SetInsertPoint(afterBB);
+
+    return nullptr;
+}
+
+antlrcpp::Any CodeGenVisitor::visitStatementList(PascalSParser::StatementListContext* ctx) {
+    if (ctx->statementList() != nullptr) {
+        visit(ctx->statementList());
+        visit(ctx->statement());
+    } else {
+        visit(ctx->statement());
+    }
+    return nullptr;
+}
+
+antlrcpp::Any CodeGenVisitor::visitCaseStatement(PascalSParser::CaseStatementContext* ctx) {
+    // 获取当前的函数
+    Function* function = builder.GetInsertBlock()->getParent();
+    BasicBlock* switchBB = BasicBlock::Create(context, "switchBB", function);
+
+    // 访问 case 的表达式，获取其值
+    Value* caseValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+
+    // 开始switch语句
+    builder.CreateBr(switchBB);
+    builder.SetInsertPoint(switchBB);
+    SwitchInst* switchInst = builder.CreateSwitch(caseValue, nullptr);
+
+    BasicBlock* afterCaseBB = BasicBlock::Create(context, "case_end", function);
+
+    current_loop_end = afterCaseBB;
+
+    // 访问 case 的分支列表
+    auto branches = std::any_cast<std::vector<std::pair<std::vector<llvm::Value*>, llvm::BasicBlock*>>>(visit(ctx->caseBody()->branchList()));
+
+    // 遍历所有的分支
+    for (auto branch : branches) {
+        // 获取分支的常量值
+        std::vector<llvm::Value*> constValues = branch.first;
+
+        // 创建基本块，用于在匹配到合适的分支之后跳转到该分支执行代码
+        BasicBlock* caseBB = branch.second;
+
+        // 遍历所有的常量值
+        for (auto constValue : constValues) {
+            // 添加分支
+            switchInst->addCase(cast<ConstantInt>(constValue), caseBB);
+        }
+    }
+
+    // default跳转afterCaseBB
+    switchInst->setDefaultDest(afterCaseBB);
+
+    // 设置 IRBuilder 的插入点到 case 结束块，便于后续的指令生成
+    builder.SetInsertPoint(afterCaseBB);
+
+    return nullptr;
+}
+
+antlrcpp::Any CodeGenVisitor::visitConstList(PascalSParser::ConstListContext* ctx) {
+    // 递归访问 constList，得到所有的常量，加入vector
+    std::vector<llvm::Value*> constValues;
+    constValues.push_back(std::any_cast<llvm::Value*>(visit(ctx->constVariable())));
+
+    if (ctx->constList() != nullptr) {
+        auto nextConstValues = std::any_cast<std::vector<llvm::Value*>>(visit(ctx->constList()));
+        constValues.insert(constValues.begin(), nextConstValues.begin(), nextConstValues.end());
+    }
+
+    return constValues;
+}
+
+antlrcpp::Any CodeGenVisitor::visitBranch(PascalSParser::BranchContext* ctx) {
+    // 访问 constList，得到该分支的所有常量
+    std::vector<llvm::Value*> constValues = std::any_cast<std::vector<llvm::Value*>>(visit(ctx->constList()));
+
+    // 创建基本块，用于在匹配到合适的分支之后跳转到该分支执行代码
+    Function* function = builder.GetInsertBlock()->getParent();
+    BasicBlock* caseBB = BasicBlock::Create(context, "case_branch", function);
+    builder.SetInsertPoint(caseBB);
+
+    visit(ctx->statement());
+
+    builder.CreateBr(current_loop_end);
+
+    // 返回 pair：constValue -> statement
+    return std::make_pair(constValues, caseBB);
+}
+
+antlrcpp::Any CodeGenVisitor::visitBranchList(PascalSParser::BranchListContext* ctx) {
+    // 递归访问 branchList，得到所有的分支，加入vector
+    std::vector<std::pair<std::vector<llvm::Value*>, llvm::BasicBlock*>> branches;
+
+    if (ctx->branchList() != nullptr) {
+
+        auto nextBranches = std::any_cast<std::vector<std::pair<std::vector<llvm::Value*>, llvm::BasicBlock*>>>(visit(ctx->branchList()));
+
+        branches.insert(branches.begin(), nextBranches.begin(), nextBranches.end());
+    }
+
+    branches.push_back(std::any_cast<std::pair<std::vector<llvm::Value*>, llvm::BasicBlock*>>(visit(ctx->branch())));
+
+    return branches;
+}
 
 antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) {
     Scope* sub_program_scope = new Scope(scope);
@@ -413,7 +677,7 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
     }
 
     if (value != nullptr && isa<AllocaInst>(value)) {
-        Type* type = ((AllocaInst*) value)->getAllocatedType();
+        Type* type = ((AllocaInst*)value)->getAllocatedType();
         value = builder.CreateLoad(type, value);
     }
 
@@ -421,7 +685,7 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
 }
 
 antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) {
-    //return: llvm::Value*
+    // return: llvm::Value*
     Value* value = nullptr;
     //    std::cout << "unsignConsVar" << std::endl;
     if (ctx->ID()) {
@@ -440,7 +704,7 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
             int num = std::stoi(num_str);
             value = llvm::ConstantInt::get(context, llvm::APInt(32, num));
         }
-    }  else if (ctx->CHARLITERAL()) {
+    } else if (ctx->CHARLITERAL()) {
         // 获取 CHARLITERAL 的文本值
         std::string charLiteral = ctx->CHARLITERAL()->getText();
         // 提取字符值（去掉引号）
@@ -453,46 +717,46 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
 }
 
 antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
-    //return: llvm::Value*
-    //    std::cout << "factor" << std::endl;
+    // return: llvm::Value*
+    //     std::cout << "factor" << std::endl;
     Value* value = nullptr;
-    if(ctx->unsignConstVariable()){
-        value = std::any_cast<llvm::Value *>(visit(ctx->unsignConstVariable()));
-    } else if(ctx->variable()){
-        value = std::any_cast<llvm::Value *>(visit(ctx->variable()));
-    } else if(ctx->ID() && ctx->LPAREN() && ctx->expressionList() && ctx->RPAREN()){
+    if (ctx->unsignConstVariable()) {
+        value = std::any_cast<llvm::Value*>(visit(ctx->unsignConstVariable()));
+    } else if (ctx->variable()) {
+        value = std::any_cast<llvm::Value*>(visit(ctx->variable()));
+    } else if (ctx->ID() && ctx->LPAREN() && ctx->expressionList() && ctx->RPAREN()) {
         // Function call
         std::string funcName = ctx->ID()->getText();
         Function* func = module->getFunction(funcName);
-        if(!func) {
+        if (!func) {
             // Not declared
             value = nullptr;
-        } else{
+        } else {
             // visit expressionList will return a vector of Value*
             std::vector<Value*> args;
             args = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
             value = builder.CreateCall(func, args, "calltmp");
         }
-    } else if(ctx->LPAREN() && ctx->expression() && ctx->RPAREN()){
+    } else if (ctx->LPAREN() && ctx->expression() && ctx->RPAREN()) {
         value = std::any_cast<llvm::Value*>(visit(ctx->expression()));
-    } else if(ctx->NOT() && ctx->factor()){
+    } else if (ctx->NOT() && ctx->factor()) {
         llvm::Value* factorValue = std::any_cast<llvm::Value*>(visit(ctx->factor()));
         if (isa<AllocaInst>(factorValue)) {
             factorValue = builder.CreateLoad(((AllocaInst*)factorValue)->getAllocatedType(), factorValue, "loadlhs");
         }
         value = builder.CreateNot(factorValue, "nottmp");
-    } else if(ctx->boolean()){
+    } else if (ctx->boolean()) {
         value = std::any_cast<llvm::Value*>(visit(ctx->boolean()));
     }
     //    std::cout << "end factor" << std::endl;
     return value;
 }
 
-antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx){
+antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
     // return: llvm::Value*
     //    std::cout << "term" << std::endl;
     Value* value = nullptr;
-    if(ctx->multiplyOperator()){
+    if (ctx->multiplyOperator()) {
         Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->term()));
         Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->factor()));
         std::string op = ctx->multiplyOperator()->getText();
@@ -522,27 +786,27 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx){
 antlrcpp::Any CodeGenVisitor::visitBoolean(PascalSParser::BooleanContext* ctx) {
     // return: llvm::Value*
     Value* value = nullptr;
-    if(ctx->TRUE()){
+    if (ctx->TRUE()) {
         value = llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 1);
-    } else if(ctx->FALSE()){
+    } else if (ctx->FALSE()) {
         value = llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
     }
 
     return value;
 }
 
-antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx){
+antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) {
     // return: llvm::Value*
     //    std::cout << "simpleExp" << std::endl;
     Value* value = nullptr;
-    if(ctx->PLUS()||ctx->MINUS()){
+    if (ctx->PLUS() || ctx->MINUS()) {
         Value* termValue = std::any_cast<llvm::Value*>(visit(ctx->term()));
-        if(ctx->PLUS()){
+        if (ctx->PLUS()) {
             value = termValue;
-        } else if(ctx->MINUS()){
+        } else if (ctx->MINUS()) {
             value = builder.CreateNeg(termValue, "negtmp");
         }
-    } else if (ctx->addOperator()){
+    } else if (ctx->addOperator()) {
         llvm::Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression()));
         llvm::Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->term()));
         std::string op = ctx->addOperator()->getText();
@@ -561,7 +825,7 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
         } else if (op == "or") {
             value = builder.CreateOr(lhs, rhs, "ortmp");
         }
-    } else{
+    } else {
         value = std::any_cast<llvm::Value*>(visit(ctx->term()));
     }
     //    std::cout << "end simpleExp" << std::endl;
@@ -569,7 +833,7 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
 }
 
 antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
-    std::cout<<"visitVariable"<<std::endl;
+    std::cout << "visitVariable" << std::endl;
     // return: llvm::Value*
     // Retrieve the base identifier
     std::string varName = ctx->ID()->getText();
@@ -593,7 +857,7 @@ antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx)
             }
         }
     }
-    std::cout<<"end Variable"<<std::endl;
+    std::cout << "end Variable" << std::endl;
     return value;
 }
 
