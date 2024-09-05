@@ -386,13 +386,11 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
         llvm::Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(1)));
         std::string op = ctx->relationalOpreator()->getText();
 
-        if (isa<AllocaInst>(lhs)) {
-            lhs = builder.CreateLoad(((AllocaInst*)lhs)->getAllocatedType(), lhs, "loadlhs");
-        }
-        if (isa<AllocaInst>(rhs)) {
-            rhs = builder.CreateLoad(((AllocaInst*)rhs)->getAllocatedType(), rhs, "loadrhs");
-        }
+        lhs = loadIfAlloca(lhs);
+        rhs = loadIfAlloca(rhs);
 
+        checkType(lhs, "left-hand side of expression");
+        checkType(rhs, "right-hand side of expression");
         if (op == "=") {
             value = builder.CreateICmpEQ(lhs, rhs, "eqtmp");
         } else if (op == "<>") {
@@ -407,7 +405,6 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
             value = builder.CreateICmpSGE(lhs, rhs, "getmp");
         }
     } else {
-
         //        std::cout << "end expr" << std::endl;
         value = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
     }
@@ -429,7 +426,9 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
         std::string varName = ctx->ID()->getText();
         // 假设变量已经声明并在符号表中可用
         value = scope->get(varName);
-        // TODO: 如果变量未声明或不是标识符，需要报错
+        if(value == nullptr){
+            throw SemanticException("Undefined variable: " + varName);
+        }
     } else if (ctx->NUM()) {
         // 处理NUM
         std::string num_str = ctx->NUM()->getText();
@@ -477,9 +476,8 @@ antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
         value = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     } else if(ctx->NOT() && ctx->factor()){
         llvm::Value* factorValue = std::any_cast<llvm::Value*>(visit(ctx->factor()));
-        if (isa<AllocaInst>(factorValue)) {
-            factorValue = builder.CreateLoad(((AllocaInst*)factorValue)->getAllocatedType(), factorValue, "loadlhs");
-        }
+        checkType(factorValue, "expression after NOT");
+        factorValue = loadIfAlloca(factorValue);
         value = builder.CreateNot(factorValue, "nottmp");
     } else if(ctx->boolean()){
         value = std::any_cast<llvm::Value*>(visit(ctx->boolean()));
@@ -496,12 +494,13 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx){
         Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->term()));
         Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->factor()));
         std::string op = ctx->multiplyOperator()->getText();
-        if (isa<AllocaInst>(lhs)) {
-            lhs = builder.CreateLoad(((AllocaInst*)lhs)->getAllocatedType(), lhs, "loadlhs");
-        }
-        if (isa<AllocaInst>(rhs)) {
-            rhs = builder.CreateLoad(((AllocaInst*)rhs)->getAllocatedType(), rhs, "loadrhs");
-        }
+
+        lhs = loadIfAlloca(lhs);
+        rhs = loadIfAlloca(rhs);
+
+//        std::vector<llvm::Value*> convertedValues = convertToSameType(lhs, rhs);
+//        lhs = convertedValues[0];
+//        rhs = convertedValues[1];
 
         if (op == "*") {
             value = builder.CreateMul(lhs, rhs, "multmp");
@@ -533,7 +532,7 @@ antlrcpp::Any CodeGenVisitor::visitBoolean(PascalSParser::BooleanContext* ctx) {
 
 antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx){
     // return: llvm::Value*
-    //    std::cout << "simpleExp" << std::endl;
+        std::cout << "simpleExp" << std::endl;
     Value* value = nullptr;
     if(ctx->PLUS()||ctx->MINUS()){
         Value* termValue = std::any_cast<llvm::Value*>(visit(ctx->term()));
@@ -548,23 +547,28 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
         std::string op = ctx->addOperator()->getText();
 
         // Load the values if they are variables
-        if (isa<AllocaInst>(lhs)) {
-            lhs = builder.CreateLoad(((AllocaInst*)lhs)->getAllocatedType(), lhs, "loadlhs");
-        }
-        if (isa<AllocaInst>(rhs)) {
-            rhs = builder.CreateLoad(((AllocaInst*)rhs)->getAllocatedType(), rhs, "loadrhs");
-        }
-        if (op == "+") {
-            value = builder.CreateAdd(lhs, rhs, "addtmp");
-        } else if (op == "-") {
-            value = builder.CreateSub(lhs, rhs, "subtmp");
+        lhs = loadIfAlloca(lhs);
+        rhs = loadIfAlloca(rhs);
+
+        if (op == "+" || op == "-") {
+//            std::vector<llvm::Value*> convertedValues = convertToSameType(lhs, rhs);
+//            lhs = convertedValues[0];
+//            rhs = convertedValues[1];
+            if(op == "+"){
+                value = builder.CreateAdd(lhs, rhs, "addtmp");
+            }
+            else if(op == "-"){
+                value = builder.CreateSub(lhs, rhs, "subtmp");
+            }
         } else if (op == "or") {
+            checkType(lhs, "left-hand side of expression");
+            checkType(rhs, "right-hand side of expression");
             value = builder.CreateOr(lhs, rhs, "ortmp");
         }
     } else{
         value = std::any_cast<llvm::Value*>(visit(ctx->term()));
     }
-    //    std::cout << "end simpleExp" << std::endl;
+        std::cout << "end simpleExp" << std::endl;
     return value;
 }
 
@@ -685,4 +689,41 @@ Value* CodeGenVisitor::getRecordElement(Value* record, std::string& field) {
     }
 
     return builder.CreateStructGEP(record_type, record, index);
+}
+
+
+Value* CodeGenVisitor::loadIfAlloca(llvm::Value* value) {
+    // function: Load the value if it is an alloca
+    if (isa<AllocaInst>(value)) {
+        value = builder.CreateLoad(((AllocaInst*)value)->getAllocatedType(), value);
+    }
+    return value;
+}
+
+std::vector<llvm::Value*> CodeGenVisitor::convertToSameType(llvm::Value* lhs, llvm::Value* rhs) {
+    // function: Convert the values to the same type before binary operater
+    llvm::Type* lhsType = lhs->getType();
+    llvm::Type* rhsType = rhs->getType();
+
+    if (lhsType == rhsType) {
+        return {lhs, rhs}; // No conversion needed
+    }
+
+    if (lhsType->isIntegerTy() && rhsType->isFloatTy()) {
+        lhs = builder.CreateSIToFP(lhs, rhsType, "intToFloat");
+    } else if (lhsType->isFloatTy() && rhsType->isIntegerTy()) {
+        rhs = builder.CreateSIToFP(rhs, lhsType, "intToFloat");
+    } else {
+        throw SemanticException("Type mismatch: cannot convert between incompatible types");
+    }
+
+    return {lhs, rhs};
+}
+
+void CodeGenVisitor::checkType(llvm::Value* value, const std::string& context) {
+    // function: Check type before logical operator
+    llvm::Type* type = value->getType();
+    if (!((type->isIntegerTy() && type->getIntegerBitWidth() == 32) || type->isIntegerTy(1))) {
+        throw SemanticException("Type mismatch in \" + context + \": Logical operators can only be applied to Int or Boolean types");
+    }
 }
