@@ -3,6 +3,7 @@
 
 #include "PascalSBaseVisitor.h"
 #include "Scope.h"
+#include "StandardProcedure.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -18,6 +19,7 @@ struct SubprogramParameter {
 
 class CodeGenVisitor : public PascalSBaseVisitor {
 private:
+    StandardProcedure standard_procedure;
     LLVMContext context;
     IRBuilder<> builder;
     Scope* scope = new Scope();

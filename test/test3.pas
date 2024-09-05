@@ -25,12 +25,9 @@ var
 begin
   x := 5;
   y := 10;
-  write(x);
-  write(y);
+  write('x', x, 'y', y);
   SwapNoRef(x, y);
-  write(x);
-  write(y);
+  write('x', x, 'y', y);
   Swap(x, y);
-  write(x);
-  write(y);
+  write('x', x, 'y', y);
 end.

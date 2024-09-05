@@ -1,31 +1,18 @@
 #include "CodeGenVisitor.h"
 #include "Exception/SemanticException.h"
 #include "PascalSParser.h"
+#include "StandardProcedure.h"
+#include "llvm/IR/DerivedTypes.h"
+#include <cstdarg>
 #include <filesystem>
-
-static Function* printf_prototype(LLVMContext& ctx, Module* mod) {
-
-    FunctionType* printf_type = TypeBuilder<int(char*, ...), false>::get(getGlobalContext());
-
-    Function* func = cast<Function>(mod->getOrInsertFunction(
-        "printf", printf_type,
-        AttributeSet().addAttribute(mod->getContext(), 1U, Attribute::NoAlias)));
-
-    return func;
-}
-
-void CodeGenVisitor::InitBuiltins() {
-}
 
 CodeGenVisitor::CodeGenVisitor()
     : builder(context) {
-    InitBuiltins();
 }
 
 CodeGenVisitor::CodeGenVisitor(const std::string& filename)
     : builder(context)
     , filename(filename) {
-    InitBuiltins();
 }
 
 CodeGenVisitor::~CodeGenVisitor() {
@@ -992,62 +979,35 @@ antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListC
 
 // 处理函数调用
 antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
-    std::string func_name = ctx->ID()->getText();
-    Value* symbol = subprogram_scope->get(func_name);
-
-    // 作用域中无该符号
-    if (!symbol) {
-        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-            "identifier '" + func_name + "' was not declared in this scope");
-    }
-
-    // 该符号不是函数
-    if (!llvm::isa<llvm::Function>(symbol)) {
-        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-            "'" + func_name + "' is not a function");
-    }
-
-    Function* func = llvm::cast<llvm::Function>(symbol);
-
     std::vector<Value*> args;
     if (ctx->expressionList()) {
         auto expr_list = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
         args.insert(args.end(), expr_list.begin(), expr_list.end());
     }
+    std::string func_name = ctx->ID()->getText();
 
-    if (func_name == "write") {
-        std::vector<Value*> printf_args;
-        // build printf_args based on the arguments
-        std::string format_string = "";
-        for (size_t i = 0; i < args.size(); ++i) {
-            if (args[i]->getType()->isIntegerTy()) {
-                format_string += "%d";
-            } else if (args[i]->getType()->isFloatTy()) {
-                format_string += "%f";
-            } else if (args[i]->getType()->isPointerTy()) {
-                format_string += "%p";
-            } else if (args[i]->getType()->isIntegerTy(1)) {
-                format_string += "%d";
-            } else {
-                throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-                    "Unsupported argument type for printf");
-            }
-
-            if (i != args.size() - 1) {
-                format_string += " ";
-            }
-
-            printf_args.push_back(args[i]);
-        }
-        printf_args.insert(printf_args.begin(), builder.CreateGlobalStringPtr(format_string));
-        args = printf_args;
-        Function* printf_func = printf_prototype(context, module.get());
-        func = printf_func;
+    if (StandardProcedure::hasProcedure(func_name)) {
+        auto stdProcedure = StandardProcedure::prototypeMap[func_name](module.get());
+        StandardProcedure::argsConstructorMap[func_name](&builder, args);
+        llvm::ArrayRef<llvm::Value*> argsRef(args);
+        builder.CreateCall(stdProcedure, argsRef);
     } else {
-        checkFunctionArgs(func_name, func, args);
-    }
+        Value* symbol = subprogram_scope->get(func_name);
+        // 作用域中无该符号
+        if (!symbol) {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "identifier '" + func_name + "' was not declared in this scope");
+        }
 
-    builder.CreateCall(func, args);
+        // 该符号不是函数
+        if (!llvm::isa<llvm::Function>(symbol)) {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "'" + func_name + "' is not a function");
+        }
+        Function* func = llvm::cast<llvm::Function>(symbol);
+        checkFunctionArgs(func_name, func, args);
+        builder.CreateCall(func, args);
+    }
     return nullptr;
 }
 
