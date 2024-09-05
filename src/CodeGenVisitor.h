@@ -47,7 +47,7 @@ public:
     antlrcpp::Any visitPeriods(PascalSParser::PeriodsContext* ctx) override;
     antlrcpp::Any visitPeriod(PascalSParser::PeriodContext* ctx) override;
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
-    antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) override;
+    antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) override;    antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) override;
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
     antlrcpp::Any visitIfStatement(PascalSParser::IfStatementContext* ctx) override;
     antlrcpp::Any visitForStatement(PascalSParser::ForStatementContext* ctx) override;
@@ -63,7 +63,15 @@ public:
     antlrcpp::Any visitParameterList(PascalSParser::ParameterListContext* ctx) override;
     antlrcpp::Any visitVarParameter(PascalSParser::VarParameterContext* ctx) override;
     antlrcpp::Any visitValueParameter(PascalSParser::ValueParameterContext* ctx) override;
-
+    antlrcpp::Any visitIfStatement(PascalSParser::IfStatementContext* ctx) override;
+    antlrcpp::Any visitForStatement(PascalSParser::ForStatementContext* ctx) override;
+    antlrcpp::Any visitWhileStatement(PascalSParser::WhileStatementContext* ctx) override;
+    antlrcpp::Any visitRepeatStatement(PascalSParser::RepeatStatementContext* ctx) override;
+    antlrcpp::Any visitStatementList(PascalSParser::StatementListContext* ctx) override;
+    antlrcpp::Any visitCaseStatement(PascalSParser::CaseStatementContext* ctx) override;
+    antlrcpp::Any visitConstList(PascalSParser::ConstListContext* ctx) override;
+    antlrcpp::Any visitBranch(PascalSParser::BranchContext* ctx) override;
+    antlrcpp::Any visitBranchList(PascalSParser::BranchListContext* ctx) override;
     Value* getArrayElement(Value* array, std::vector<Value*> index);
     Value* getRecordElement(Value* record, std::string& field);
 
