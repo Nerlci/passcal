@@ -21,7 +21,7 @@ private:
     LLVMContext context;
     IRBuilder<> builder;
     Scope* scope = new Scope();
-    Scope* subprogramScope = new Scope();
+    Scope* subprogram_scope = new Scope();
     llvm::Value* current_return_value = ConstantInt::get(context, APInt(32, 0));
     std::string filename;
     BasicBlock* current_loop_end;
@@ -84,6 +84,7 @@ public:
     Value* loadIfAlloca(llvm::Value* value);
     std::vector<llvm::Value*> castBinary(llvm::Value* lhs, llvm::Value* rhs);
     void checkType(llvm::Value* value, const std::string& context);
+    void checkFunctionArgs(std::string func_name, llvm::Function* func, std::vector<llvm::Value*> args);
 
     // Declare other visit methods as needed
 };

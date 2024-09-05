@@ -515,7 +515,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
     scope = sub_program_scope;
 
     auto func = std::any_cast<llvm::Function*>(visit(ctx->subprogramHead()));
-    subprogramScope->put(func->getName().str(), func);
+    subprogram_scope->put(func->getName().str(), func);
     visit(ctx->programBody());
 
     scope = prev_scope;
@@ -653,8 +653,6 @@ antlrcpp::Any CodeGenVisitor::visitValueParameter(PascalSParser::ValueParameterC
 }
 
 antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* ctx) {
-    // return: llvm::Value*
-    //    std::cout << "Visiting expression: " << ctx->getText() << std::endl;
     llvm::Value* value = nullptr;
     if (ctx->relationalOpreator()) {
         llvm::Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
@@ -702,7 +700,7 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
             }
         }
     } else {
-        //        std::cout << "end expr" << std::endl;
+        //
         value = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
     }
 
@@ -717,14 +715,14 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
 antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) {
     // return: llvm::Value*
     Value* value = nullptr;
-    //    std::cout << "unsignConsVar" << std::endl;
+    //
     if (ctx->ID()) {
         // 处理ID
-        std::string varName = ctx->ID()->getText();
+        std::string var_name = ctx->ID()->getText();
         // 假设变量已经声明并在符号表中可用
-        value = scope->get(varName);
+        value = scope->get(var_name);
         if (value == nullptr) {
-            throw SemanticException("Undefined variable: " + varName);
+            throw SemanticException("Undefined variable: " + var_name);
         }
     } else if (ctx->NUM()) {
         // 处理NUM
@@ -744,13 +742,13 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
         // 创建一个 8 位的常量整数值
         value = llvm::ConstantInt::get(context, llvm::APInt(8, charValue));
     }
-    //    std::cout << "end unsignConsVar" << std::endl;
+    //
     return value;
 }
 
 antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
     // return: llvm::Value*
-    //     std::cout << "factor" << std::endl;
+    //
     Value* value = nullptr;
     if (ctx->unsignConstVariable()) {
         value = std::any_cast<llvm::Value*>(visit(ctx->unsignConstVariable()));
@@ -758,34 +756,42 @@ antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
         value = std::any_cast<llvm::Value*>(visit(ctx->variable()));
     } else if (ctx->ID() && ctx->LPAREN() && ctx->expressionList() && ctx->RPAREN()) {
         // Function call
-        std::string funcName = ctx->ID()->getText();
-        Function* func = module->getFunction(funcName);
-        if (!func) {
+        std::string func_name = ctx->ID()->getText();
+        Function* func = (Function*)subprogram_scope->get(func_name);
+
+        if (func == nullptr) {
             // Not declared
-            value = nullptr;
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "identifier '" + func_name + "' was not declared in this scope");
         } else {
+            if (func->getReturnType()->isVoidTy()) {
+                throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                    "procedure '" + func_name + "' cannot be used in an expression");
+            }
             // visit expressionList will return a vector of Value*
             std::vector<Value*> args;
             args = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
+            checkFunctionArgs(func_name, func, args);
+
             value = builder.CreateCall(func, args, "calltmp");
         }
     } else if (ctx->LPAREN() && ctx->expression() && ctx->RPAREN()) {
         value = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     } else if (ctx->NOT() && ctx->factor()) {
-        llvm::Value* factorValue = std::any_cast<llvm::Value*>(visit(ctx->factor()));
-        checkType(factorValue, "expression after NOT");
-        factorValue = loadIfAlloca(factorValue);
-        value = builder.CreateNot(factorValue, "nottmp");
+        llvm::Value* factor_value = std::any_cast<llvm::Value*>(visit(ctx->factor()));
+        checkType(factor_value, "expression after NOT");
+        factor_value = loadIfAlloca(factor_value);
+        value = builder.CreateNot(factor_value, "nottmp");
     } else if (ctx->boolean()) {
         value = std::any_cast<llvm::Value*>(visit(ctx->boolean()));
     }
-    //    std::cout << "end factor" << std::endl;
+    //
     return value;
 }
 
 antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
     // return: llvm::Value*
-    //    std::cout << "term" << std::endl;
+    //
     Value* value = nullptr;
     if (ctx->multiplyOperator()) {
         Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->term()));
@@ -796,9 +802,9 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
         rhs = loadIfAlloca(rhs);
 
         if (op == "*") {
-            std::vector<llvm::Value*> convertedValues = castBinary(lhs, rhs);
-            lhs = convertedValues[0];
-            rhs = convertedValues[1];
+            std::vector<llvm::Value*> converted_values = castBinary(lhs, rhs);
+            lhs = converted_values[0];
+            rhs = converted_values[1];
 
             if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFMul(lhs, rhs, "multmp");
@@ -817,7 +823,7 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
     } else {
         value = std::any_cast<llvm::Value*>(visit(ctx->factor()));
     }
-    //    std::cout << "end term" << std::endl;
+    //
     return value;
 }
 
@@ -835,14 +841,14 @@ antlrcpp::Any CodeGenVisitor::visitBoolean(PascalSParser::BooleanContext* ctx) {
 
 antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) {
     // return: llvm::Value*
-    std::cout << "simpleExp" << std::endl;
+
     Value* value = nullptr;
     if (ctx->PLUS() || ctx->MINUS()) {
-        Value* termValue = std::any_cast<llvm::Value*>(visit(ctx->term()));
+        Value* term_value = std::any_cast<llvm::Value*>(visit(ctx->term()));
         if (ctx->PLUS()) {
-            value = termValue;
+            value = term_value;
         } else if (ctx->MINUS()) {
-            value = builder.CreateNeg(termValue, "negtmp");
+            value = builder.CreateNeg(term_value, "negtmp");
         }
     } else if (ctx->addOperator()) {
         llvm::Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression()));
@@ -854,9 +860,9 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
         rhs = loadIfAlloca(rhs);
 
         if (op == "+" || op == "-") {
-            std::vector<llvm::Value*> convertedValues = castBinary(lhs, rhs);
-            lhs = convertedValues[0];
-            rhs = convertedValues[1];
+            std::vector<llvm::Value*> converted_values = castBinary(lhs, rhs);
+            lhs = converted_values[0];
+            rhs = converted_values[1];
             if (op == "+") {
                 if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                     value = builder.CreateFAdd(lhs, rhs, "addtmp");
@@ -878,36 +884,36 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
     } else {
         value = std::any_cast<llvm::Value*>(visit(ctx->term()));
     }
-    std::cout << "end simpleExp" << std::endl;
+
     return value;
 }
 
 antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
-    std::cout << "visitVariable" << std::endl;
+
     // return: llvm::Value*
     // Retrieve the base identifier
-    std::string varName = ctx->ID()->getText();
-    llvm::Value* value = scope->get(varName);
+    std::string var_name = ctx->ID()->getText();
+    llvm::Value* value = scope->get(var_name);
 
     // Retrieve the IdVarpartsContext
-    PascalSParser::IdVarpartsContext* idVarpartsCtx = ctx->idVarparts();
+    PascalSParser::IdVarpartsContext* id_varparts_ctx = ctx->idVarparts();
 
     // Process each IdVarpartContext
-    for (size_t i = 0; i < idVarpartsCtx->children.size(); ++i) {
-        auto idVarpartCtx = dynamic_cast<PascalSParser::IdVarpartContext*>(idVarpartsCtx->children[i]);
-        if (idVarpartCtx) {
-            if (idVarpartCtx->LBRACKET()) {
+    for (size_t i = 0; i < id_varparts_ctx->children.size(); ++i) {
+        auto id_varpart_ctx = dynamic_cast<PascalSParser::IdVarpartContext*>(id_varparts_ctx->children[i]);
+        if (id_varpart_ctx) {
+            if (id_varpart_ctx->LBRACKET()) {
                 // Handle array element access
-                std::vector<Value*> index = std::any_cast<std::vector<Value*>>(visit(idVarpartCtx->expressionList()));
+                std::vector<Value*> index = std::any_cast<std::vector<Value*>>(visit(id_varpart_ctx->expressionList()));
                 value = getArrayElement(value, index);
-            } else if (idVarpartCtx->DOT()) {
+            } else if (id_varpart_ctx->DOT()) {
                 // Handle record field access
-                std::string fieldName = idVarpartCtx->ID()->getText();
-                value = getRecordElement(value, fieldName);
+                std::string field_name = id_varpart_ctx->ID()->getText();
+                value = getRecordElement(value, field_name);
             }
         }
     }
-    std::cout << "end Variable" << std::endl;
+
     return value;
 }
 
@@ -949,7 +955,7 @@ antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListC
 // 处理函数调用
 antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
     std::string func_name = ctx->ID()->getText();
-    Value* symbol = scope->get(func_name);
+    Value* symbol = subprogram_scope->get(func_name);
 
     // 作用域中无该符号
     if (!symbol) {
@@ -969,7 +975,10 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
         args.insert(args.end(), expr_list.begin(), expr_list.end());
     }
 
-    return builder.CreateCall(func, args, "calltmp");
+    checkFunctionArgs(func_name, func, args);
+
+    builder.CreateCall(func, args);
+    return nullptr;
 }
 
 Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
@@ -1031,5 +1040,24 @@ void CodeGenVisitor::checkType(llvm::Value* value, const std::string& context) {
     llvm::Type* type = value->getType();
     if (!((type->isIntegerTy() && type->getIntegerBitWidth() == 32) || type->isIntegerTy(1))) {
         throw SemanticException("Type mismatch in \" + context + \": Logical operators can only be applied to Int or Boolean types");
+    }
+}
+
+void CodeGenVisitor::checkFunctionArgs(std::string func_name, llvm::Function* func, std::vector<llvm::Value*> args) {
+    FunctionType* func_type = func->getFunctionType();
+
+    // 参数个数检查
+    if (args.size() != func_type->getNumParams()) {
+        throw SemanticException("Incorrect number of arguments for function " + func_name + ". Expected " + std::to_string(func_type->getNumParams()) + ", but got " + std::to_string(args.size()) + ".");
+    }
+
+    // 参数类型检查
+    for (size_t i = 0; i < args.size(); ++i) {
+        Type* expected_type = func_type->getParamType(i);
+        Type* actual_type = args[i]->getType();
+
+        if (!expected_type->isPointerTy() && expected_type != actual_type) {
+            throw SemanticException("Argument type mismatch for parameter " + std::to_string(i + 1) + " in function " + func_name + ".");
+        }
     }
 }
