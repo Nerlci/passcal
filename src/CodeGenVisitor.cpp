@@ -248,13 +248,12 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
     scope = sub_program_scope;
 
     auto func = std::any_cast<llvm::Function*>(visit(ctx->subprogramHead()));
+    scope->put(func->getName().str(), func);
     visit(ctx->programBody());
 
     scope = prev_scope;
     current_return_value = prev_return_value;
     builder.restoreIP(prev_insert_point);
-
-    scope->put(func->getName().str(), func);
 
     return nullptr;
 }
