@@ -23,7 +23,7 @@ constVariable:
 	| PLUS NUM
 	| MINUS NUM
 	| NUM
-	| QUOTE LETTER QUOTE;
+	| CHARLITERAL;
 
 typeDeclarations: TYPE typeDeclaration SEMICOLON |;
 
@@ -110,16 +110,16 @@ callProcedureStatement: ID | ID LPAREN expressionList RPAREN;
 expressionList: expressionList COMMA expression | expression;
 
 expression:
-	simpleExpression RELOP simpleExpression
+	simpleExpression relationalOpreator simpleExpression
 	| simpleExpression;
 
 simpleExpression:
 	term
 	| PLUS term
 	| MINUS term
-	| simpleExpression ADDOP term;
+	| simpleExpression addOperator term;
 
-term: term MULOP factor | factor;
+term: term multiplyOperator factor | factor;
 
 boolean: TRUE | FALSE;
 
@@ -131,4 +131,10 @@ factor:
 	| NOT factor
 	| boolean;
 
-unsignConstVariable: ID | NUM | QUOTE LETTER QUOTE;
+unsignConstVariable: ID | NUM | CHARLITERAL;
+
+relationalOpreator: EQUAL | '<>' | '<' | '<=' | '>' | '>=';
+
+addOperator: PLUS | MINUS | OR;
+
+multiplyOperator: MULT | DIVIDE | DIV | MOD | AND;

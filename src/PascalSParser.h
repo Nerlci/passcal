@@ -12,16 +12,17 @@
 class  PascalSParser : public antlr4::Parser {
 public:
   enum {
-    RELOP = 1, ADDOP = 2, MULOP = 3, AND = 4, OR = 5, NOT = 6, INTEGER = 7, 
-    REAL = 8, BOOLEAN = 9, CHAR = 10, ARRAY = 11, BEGIN = 12, CASE = 13, 
-    CONST = 14, DIV = 15, DO = 16, DOWNTO = 17, ELSE = 18, END = 19, FALSE = 20, 
-    FOR = 21, FUNCTION = 22, IF = 23, MOD = 24, OF = 25, PROCEDURE = 26, 
-    PROGRAM = 27, RECORD = 28, REPEAT = 29, THEN = 30, TO = 31, TRUE = 32, 
-    TYPE = 33, UNTIL = 34, VAR = 35, WHILE = 36, ID = 37, LETTER = 38, NUM = 39, 
-    EXPONENT = 40, FRAC = 41, DIGITS = 42, DIGIT = 43, EQUAL = 44, PLUS = 45, 
-    MINUS = 46, MULT = 47, DIVIDE = 48, ASSIGNOP = 49, PERIODOP = 50, DOT = 51, 
-    COMMA = 52, COLON = 53, SEMICOLON = 54, QUOTE = 55, LPAREN = 56, RPAREN = 57, 
-    LBRACKET = 58, RBRACKET = 59, NEWLINE = 60, WS = 61
+    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, AND = 6, OR = 7, NOT = 8, 
+    INTEGER = 9, REAL = 10, BOOLEAN = 11, CHAR = 12, ARRAY = 13, BEGIN = 14, 
+    CASE = 15, CONST = 16, DIV = 17, DO = 18, DOWNTO = 19, ELSE = 20, END = 21, 
+    FALSE = 22, FOR = 23, FUNCTION = 24, IF = 25, MOD = 26, OF = 27, PROCEDURE = 28, 
+    PROGRAM = 29, RECORD = 30, REPEAT = 31, THEN = 32, TO = 33, TRUE = 34, 
+    TYPE = 35, UNTIL = 36, VAR = 37, WHILE = 38, CHARLITERAL = 39, ID = 40, 
+    LETTER = 41, NUM = 42, EXPONENT = 43, FRAC = 44, DIGITS = 45, DIGIT = 46, 
+    EQUAL = 47, PLUS = 48, MINUS = 49, MULT = 50, DIVIDE = 51, ASSIGNOP = 52, 
+    PERIODOP = 53, DOT = 54, COMMA = 55, COLON = 56, SEMICOLON = 57, QUOTE = 58, 
+    LPAREN = 59, RPAREN = 60, LBRACKET = 61, RBRACKET = 62, NEWLINE = 63, 
+    WS = 64
   };
 
   enum {
@@ -37,7 +38,8 @@ public:
     RuleCaseBody = 31, RuleBranchList = 32, RuleBranch = 33, RuleConstList = 34, 
     RuleUpdown = 35, RuleCallProcedureStatement = 36, RuleExpressionList = 37, 
     RuleExpression = 38, RuleSimpleExpression = 39, RuleTerm = 40, RuleBoolean = 41, 
-    RuleFactor = 42, RuleUnsignConstVariable = 43
+    RuleFactor = 42, RuleUnsignConstVariable = 43, RuleRelationalOpreator = 44, 
+    RuleAddOperator = 45, RuleMultiplyOperator = 46
   };
 
   explicit PascalSParser(antlr4::TokenStream *input);
@@ -100,7 +102,10 @@ public:
   class TermContext;
   class BooleanContext;
   class FactorContext;
-  class UnsignConstVariableContext; 
+  class UnsignConstVariableContext;
+  class RelationalOpreatorContext;
+  class AddOperatorContext;
+  class MultiplyOperatorContext; 
 
   class  ProgramContext : public antlr4::ParserRuleContext {
   public:
@@ -207,9 +212,7 @@ public:
     antlr4::tree::TerminalNode *ID();
     antlr4::tree::TerminalNode *MINUS();
     antlr4::tree::TerminalNode *NUM();
-    std::vector<antlr4::tree::TerminalNode *> QUOTE();
-    antlr4::tree::TerminalNode* QUOTE(size_t i);
-    antlr4::tree::TerminalNode *LETTER();
+    antlr4::tree::TerminalNode *CHARLITERAL();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -800,7 +803,7 @@ public:
     virtual size_t getRuleIndex() const override;
     std::vector<SimpleExpressionContext *> simpleExpression();
     SimpleExpressionContext* simpleExpression(size_t i);
-    antlr4::tree::TerminalNode *RELOP();
+    RelationalOpreatorContext *relationalOpreator();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -817,7 +820,7 @@ public:
     antlr4::tree::TerminalNode *PLUS();
     antlr4::tree::TerminalNode *MINUS();
     SimpleExpressionContext *simpleExpression();
-    antlr4::tree::TerminalNode *ADDOP();
+    AddOperatorContext *addOperator();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -832,7 +835,7 @@ public:
     virtual size_t getRuleIndex() const override;
     FactorContext *factor();
     TermContext *term();
-    antlr4::tree::TerminalNode *MULOP();
+    MultiplyOperatorContext *multiplyOperator();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -883,9 +886,7 @@ public:
     virtual size_t getRuleIndex() const override;
     antlr4::tree::TerminalNode *ID();
     antlr4::tree::TerminalNode *NUM();
-    std::vector<antlr4::tree::TerminalNode *> QUOTE();
-    antlr4::tree::TerminalNode* QUOTE(size_t i);
-    antlr4::tree::TerminalNode *LETTER();
+    antlr4::tree::TerminalNode *CHARLITERAL();
 
 
     virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
@@ -893,6 +894,51 @@ public:
   };
 
   UnsignConstVariableContext* unsignConstVariable();
+
+  class  RelationalOpreatorContext : public antlr4::ParserRuleContext {
+  public:
+    RelationalOpreatorContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *EQUAL();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  RelationalOpreatorContext* relationalOpreator();
+
+  class  AddOperatorContext : public antlr4::ParserRuleContext {
+  public:
+    AddOperatorContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *PLUS();
+    antlr4::tree::TerminalNode *MINUS();
+    antlr4::tree::TerminalNode *OR();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  AddOperatorContext* addOperator();
+
+  class  MultiplyOperatorContext : public antlr4::ParserRuleContext {
+  public:
+    MultiplyOperatorContext(antlr4::ParserRuleContext *parent, size_t invokingState);
+    virtual size_t getRuleIndex() const override;
+    antlr4::tree::TerminalNode *MULT();
+    antlr4::tree::TerminalNode *DIVIDE();
+    antlr4::tree::TerminalNode *DIV();
+    antlr4::tree::TerminalNode *MOD();
+    antlr4::tree::TerminalNode *AND();
+
+
+    virtual std::any accept(antlr4::tree::ParseTreeVisitor *visitor) override;
+   
+  };
+
+  MultiplyOperatorContext* multiplyOperator();
 
 
   bool sempred(antlr4::RuleContext *_localctx, size_t ruleIndex, size_t predicateIndex) override;
