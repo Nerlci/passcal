@@ -33,4 +33,5 @@ begin
   x := 5;
   y := 10;
   Swap(x,y);
+  SwapNoRef(x,y);
 end.

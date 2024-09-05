@@ -1,9 +1,9 @@
 #include <llvm/IR/LegacyPassManager.h>
 #include <llvm/MC/TargetRegistry.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Host.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Target/TargetMachine.h>
-// #include <llvm/TargetParser/Host.h>
 
 #include <getopt.h>
 
@@ -95,41 +95,41 @@ int main(int argc, char* argv[]) {
     InitializeAllAsmParsers();
     InitializeAllAsmPrinters();
 
-    // // 获取目标机器
-    // std::string targetTriple = llvm::sys::getDefaultTargetTriple();
-    // codeGen.module->setTargetTriple(targetTriple);
+    // 获取目标机器
+    std::string targetTriple = llvm::sys::getDefaultTargetTriple();
+    codeGen.module->setTargetTriple(targetTriple);
 
-    // std::string error;
+    std::string error;
 
-    // const llvm::Target* target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
-    // if (!target) {
-    //     llvm::errs() << "Unable to find target\n";
-    //     return 1;
-    // }
+    const llvm::Target* target = llvm::TargetRegistry::lookupTarget(targetTriple, error);
+    if (!target) {
+        llvm::errs() << "Unable to find target\n";
+        return 1;
+    }
 
-    // llvm::TargetOptions options;
-    // std::unique_ptr<llvm::TargetMachine> targetMachine(target->createTargetMachine(targetTriple, "generic", "", options, llvm::Reloc::PIC_));
-    // codeGen.module->setDataLayout(targetMachine->createDataLayout());
+    llvm::TargetOptions options;
+    std::unique_ptr<llvm::TargetMachine> targetMachine(target->createTargetMachine(targetTriple, "generic", "", options, llvm::Reloc::PIC_));
+    codeGen.module->setDataLayout(targetMachine->createDataLayout());
 
-    // // 设置输出文件名
-    // std::error_code EC;
-    // llvm::raw_fd_ostream dest(output_file, EC, llvm::sys::fs::OF_None);
-    // if (EC) {
-    //     llvm::errs() << "Could not open file: " << EC.message();
-    //     return 1;
-    // }
+    // 设置输出文件名
+    std::error_code EC;
+    llvm::raw_fd_ostream dest(output_file, EC, llvm::sys::fs::OF_None);
+    if (EC) {
+        llvm::errs() << "Could not open file: " << EC.message();
+        return 1;
+    }
 
-    // llvm::legacy::PassManager pass;
-    // if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::ObjectFile)) {
-    //     llvm::errs() << "TargetMachine can't emit a file of this type\n";
-    //     return 1;
-    // }
+    llvm::legacy::PassManager pass;
+    if (targetMachine->addPassesToEmitFile(pass, dest, nullptr, llvm::CodeGenFileType::CGFT_ObjectFile)) {
+        llvm::errs() << "TargetMachine can't emit a file of this type\n";
+        return 1;
+    }
 
-    // pass.run(*codeGen.module);
-    // dest.flush();
+    pass.run(*codeGen.module);
+    dest.flush();
 
-    // // 清理
-    // llvm::llvm_shutdown();
+    // 清理
+    llvm::llvm_shutdown();
 
     return 0;
 }
