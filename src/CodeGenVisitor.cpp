@@ -252,7 +252,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
     scope = sub_program_scope;
 
     auto func = std::any_cast<llvm::Function*>(visit(ctx->subprogramHead()));
-    scope->put(func->getName().str(), func);
+    subprogramScope->put(func->getName().str(), func);
     visit(ctx->programBody());
 
     scope = prev_scope;
@@ -322,6 +322,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
 
     if (ctx->FUNCTION()) {
         return_value = builder.CreateAlloca(return_type, nullptr, sub_program_name + "_return_value");
+        scope->put(sub_program_name, return_value);
         current_return_value = return_value;
     }
 
@@ -332,7 +333,6 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
     // llvm::Value* someVarValue = builder.CreateLoad(someVarPtr); // Load the original value
     // ... Modify the value ...
     // builder.CreateStore(modifiedValue, someVarPtr); // Store back the modified value
-
     return sub_program;
 }
 

@@ -21,6 +21,7 @@ private:
     LLVMContext context;
     IRBuilder<> builder;
     Scope* scope = new Scope();
+    Scope* subprogramScope = new Scope();
     llvm::Value* current_return_value = ConstantInt::get(context, APInt(32, 0));
     std::string filename;
 
