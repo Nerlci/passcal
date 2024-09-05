@@ -1,6 +1,7 @@
 #include "CodeGenVisitor.h"
 #include "Exception/SemanticException.h"
 #include "PascalSParser.h"
+#include <filesystem>
 
 CodeGenVisitor::CodeGenVisitor()
     : builder(context) {
@@ -17,9 +18,9 @@ CodeGenVisitor::~CodeGenVisitor() {
 
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
     // Create a new LLVM module
-    auto program_id_node = ctx->ID();
-    std::string program_name = program_id_node->getText();
-    module = std::make_unique<Module>(program_name, context);
+    std::filesystem::path filePath(filename);
+    std::string program_file_name = filePath.stem().string();
+    module = std::make_unique<Module>(program_file_name, context);
 
     llvm::FunctionType* main_func_type = llvm::FunctionType::get(Type::getInt32Ty(context), false);
     llvm::Function* main_func = llvm::Function::Create(main_func_type, llvm::Function::ExternalLinkage, "main", module.get());
@@ -245,7 +246,7 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
 
 antlrcpp::Any CodeGenVisitor::visitIfStatement(PascalSParser::IfStatementContext* ctx) {
     // 访问条件表达式
-    llvm::Value* condition = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    llvm::Value* condition = std::any_cast<llvm::Value*>(visit(ctx->expression()));
 
     // 创建基本块：then和else
     llvm::Function* parentFunction = builder.GetInsertBlock()->getParent();
@@ -290,10 +291,10 @@ antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementConte
     std::string loopVar = ctx->ID()->getText();
 
     // Get the initial value
-    Value* initValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(0)));
+    Value* initValue = std::any_cast<llvm::Value*>(visit(ctx->expression(0)));
 
     // Get the final value
-    Value* finalValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(1)));
+    Value* finalValue = std::any_cast<llvm::Value*>(visit(ctx->expression(1)));
 
     // Determine if it's counting up or down
     bool countUp = ctx->updown()->getText() == "to";
@@ -352,7 +353,7 @@ antlrcpp::Any CodeGenVisitor::visitWhileStatement(PascalSParser::WhileStatementC
     builder.SetInsertPoint(conditionBB);
 
     // 访问条件表达式
-    Value* condition = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    Value* condition = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     // 创建条件跳转
     builder.CreateCondBr(condition, loopBB, afterBB);
 
@@ -393,7 +394,7 @@ antlrcpp::Any CodeGenVisitor::visitRepeatStatement(PascalSParser::RepeatStatemen
     builder.SetInsertPoint(conditionBB);
 
     // Generate code for the condition
-    Value* conditionValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    Value* conditionValue = std::any_cast<llvm::Value*>(visit(ctx->expression()));
 
     // Create conditional branch
     // If condition is false (0), continue looping. If true (1), exit the loop.
@@ -421,7 +422,7 @@ antlrcpp::Any CodeGenVisitor::visitCaseStatement(PascalSParser::CaseStatementCon
     BasicBlock* switchBB = BasicBlock::Create(context, "switchBB", function);
 
     // 访问 case 的表达式，获取其值
-    Value* caseValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    Value* caseValue = std::any_cast<llvm::Value*>(visit(ctx->expression()));
 
     // 开始switch语句
     builder.CreateBr(switchBB);
@@ -727,7 +728,7 @@ antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
     } else if (ctx->ID() && ctx->LPAREN() && ctx->expressionList() && ctx->RPAREN()) {
         // Function call
         std::string funcName = ctx->ID()->getText();
-        Function* func = module->getFunction(funcName);
+        Function* func = (Function*)subprogramScope->get(funcName);
         if (!func) {
             // Not declared
             value = nullptr;
@@ -833,7 +834,7 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
 }
 
 antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
-    std::cout << "visitVariable" << std::endl;
+
     // return: llvm::Value*
     // Retrieve the base identifier
     std::string varName = ctx->ID()->getText();
@@ -857,7 +858,7 @@ antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx)
             }
         }
     }
-    std::cout << "end Variable" << std::endl;
+
     return value;
 }
 
@@ -899,7 +900,7 @@ antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListC
 // 处理函数调用
 antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
     std::string func_name = ctx->ID()->getText();
-    Value* symbol = scope->get(func_name);
+    Value* symbol = subprogramScope->get(func_name);
 
     // 作用域中无该符号
     if (!symbol) {
@@ -919,7 +920,9 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
         args.insert(args.end(), expr_list.begin(), expr_list.end());
     }
 
-    return builder.CreateCall(func, args, "calltmp");
+    builder.CreateCall(func, args);
+
+    return nullptr;
 }
 
 Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
