@@ -412,6 +412,7 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
 }
 
 antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
+    std::cout<<"visitVariable"<<std::endl;
     // return: llvm::Value*
 
 //    初始化 value 为变量的基地址
@@ -445,12 +446,11 @@ antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx)
             }
         }
     }
-
+    std::cout<<"end Variable"<<std::endl;
     return value;
 }
 
 // Implement other visit methods as needed
-
 Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
     // Generate LLVM IR for getting array element
     Type* array_type = ((AllocaInst*)array)->getAllocatedType();
@@ -480,57 +480,61 @@ Value* CodeGenVisitor::getRecordElement(Value* record, std::string& field) {
     // }
 
     return builder.CreateStructGEP(record_type, record, index);
-// 处理赋值语句
-antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::AssignmentStatementContext* ctx) {
-    Value* var = std::any_cast<Value*>(visit(ctx->variable()));
-    Value* expr = std::any_cast<Value*>(visit(ctx->expression()));
-
-    if (!var) {
-        // 变量未定义
-        return nullptr;
-    }
-
-    return builder.CreateStore(expr, var);
 }
-
-// 处理表达式列表
-antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListContext* ctx) {
-    std::vector<Value*> expressions;
-
-    // 假如有嵌套的表达式列表
-    if (ctx->expressionList()) {
-        auto nestedExpressions = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
-        expressions.insert(expressions.end(), nestedExpressions.begin(), nestedExpressions.end());
-    }
-
-    Value* exprValue = std::any_cast<Value*>(visit(ctx->expression()));
-    expressions.push_back(exprValue);
-
-    return expressions;
-}
-
-// 处理函数调用
-antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
-    std::string func_name = ctx->ID()->getText();
-    Value* symbol = scope->get(func_name);
-
-    // 作用域中无该符号
-    if (!symbol) {
-        return nullptr;
-    }
-
-    // 该符号不是函数
-    if (!llvm::isa<llvm::Function>(symbol)) {
-        return nullptr;
-    }
-
-    Function* func = llvm::cast<llvm::Function>(symbol);
-
-    std::vector<Value*> args;
-    if (ctx->expressionList()) {
-        auto expr_list = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
-        args.insert(args.end(), expr_list.begin(), expr_list.end());
-    }
-
-    return builder.CreateCall(func, args, "calltmp");
-}
+//// 处理赋值语句
+//antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::AssignmentStatementContext* ctx) {
+//    std::cout<<"visitAssignmentStatement"<<std::endl;
+//    Value* var = std::any_cast<Value*>(visit(ctx->variable()));
+//    Value* expr = std::any_cast<Value*>(visit(ctx->expression()));
+//
+//    if (!var) {
+//        // 变量未定义
+//        return nullptr;
+//    }
+//    std::cout<<"end AssignmentStatement"<<std::endl;
+//    return builder.CreateStore(expr, var);
+//}
+//
+//// 处理表达式列表
+//antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListContext* ctx) {
+//    std::cout<<"visitExpressionList"<<std::endl;
+//    std::vector<Value*> expressions;
+//
+//    // 假如有嵌套的表达式列表
+//    if (ctx->expressionList()) {
+//        auto nestedExpressions = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
+//        expressions.insert(expressions.end(), nestedExpressions.begin(), nestedExpressions.end());
+//    }
+//
+//    Value* exprValue = std::any_cast<Value*>(visit(ctx->expression()));
+//    expressions.push_back(exprValue);
+//    std::cout<<"end visitExpressionList"<<std::endl;
+//    return expressions;
+//}
+//
+//// 处理函数调用
+//antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
+//    std::cout<<"visitCallProcedureStatement"<<std::endl;
+//    std::string func_name = ctx->identifier()->getText();
+//    Value* symbol = scope->get(func_name);
+//
+//    // 作用域中无该符号
+//    if (!symbol) {
+//        return nullptr;
+//    }
+//
+//    // 该符号不是函数
+//    if (!llvm::isa<llvm::Function>(symbol)) {
+//        return nullptr;
+//    }
+//
+//    Function* func = llvm::cast<llvm::Function>(symbol);
+//
+//    std::vector<Value*> args;
+//    if (ctx->expressionList()) {
+//        auto expr_list = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
+//        args.insert(args.end(), expr_list.begin(), expr_list.end());
+//    }
+//    std::cout<<"end visitCallProcedureStatement"<<std::endl;
+//    return builder.CreateCall(func, args, "calltmp");
+//}

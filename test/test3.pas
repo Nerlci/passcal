@@ -31,5 +31,4 @@ begin
 
     flag := a <> b;
     rec.x := 15;
-    arr[1] := 10;
 end.
