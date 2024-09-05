@@ -40,3 +40,6 @@ compile_commands.json
 # Build artifacts
 .antlr/
 build/
+
+antlr4/
+.idea/

@@ -24,6 +24,7 @@ private:
     Scope* subprogramScope = new Scope();
     llvm::Value* current_return_value = ConstantInt::get(context, APInt(32, 0));
     std::string filename;
+    BasicBlock* current_loop_end;
 
 public:
     std::unique_ptr<Module> module;
@@ -49,14 +50,34 @@ public:
     antlrcpp::Any visitPeriods(PascalSParser::PeriodsContext* ctx) override;
     antlrcpp::Any visitPeriod(PascalSParser::PeriodContext* ctx) override;
     antlrcpp::Any visitStandardType(PascalSParser::StandardTypeContext* ctx) override;
-
     antlrcpp::Any visitExpression(PascalSParser::ExpressionContext* ctx) override;
+
+    antlrcpp::Any visitIfStatement(PascalSParser::IfStatementContext* ctx) override;
+    antlrcpp::Any visitForStatement(PascalSParser::ForStatementContext* ctx) override;
+    antlrcpp::Any visitWhileStatement(PascalSParser::WhileStatementContext* ctx) override;
+    antlrcpp::Any visitRepeatStatement(PascalSParser::RepeatStatementContext* ctx) override;
+    antlrcpp::Any visitStatementList(PascalSParser::StatementListContext* ctx) override;
+    antlrcpp::Any visitCaseStatement(PascalSParser::CaseStatementContext* ctx) override;
+    antlrcpp::Any visitConstList(PascalSParser::ConstListContext* ctx) override;
+    antlrcpp::Any visitBranch(PascalSParser::BranchContext* ctx) override;
+    antlrcpp::Any visitBranchList(PascalSParser::BranchListContext* ctx) override;
+
     antlrcpp::Any visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) override;
     antlrcpp::Any visitSubprogramHead(PascalSParser::SubprogramHeadContext* ctx) override;
     antlrcpp::Any visitParameterLists(PascalSParser::ParameterListsContext* ctx) override;
     antlrcpp::Any visitParameterList(PascalSParser::ParameterListContext* ctx) override;
     antlrcpp::Any visitVarParameter(PascalSParser::VarParameterContext* ctx) override;
     antlrcpp::Any visitValueParameter(PascalSParser::ValueParameterContext* ctx) override;
+
+    antlrcpp::Any visitTerm(PascalSParser::TermContext* ctx) override;
+    antlrcpp::Any visitFactor(PascalSParser::FactorContext* ctx) override;
+    antlrcpp::Any visitAssignmentStatement(PascalSParser::AssignmentStatementContext* ctx) override;
+    antlrcpp::Any visitExpressionList(PascalSParser::ExpressionListContext* ctx) override;
+    antlrcpp::Any visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) override;
+    antlrcpp::Any visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) override;
+    antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) override;
+    antlrcpp::Any visitBoolean(PascalSParser::BooleanContext* ctx) override;
+    antlrcpp::Any visitVariable(PascalSParser::VariableContext* ctx) override;
 
     Value* getArrayElement(Value* array, std::vector<Value*> index);
     Value* getRecordElement(Value* record, std::string& field);
