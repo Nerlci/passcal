@@ -1,6 +1,7 @@
 #include "CodeGenVisitor.h"
 #include "Exception/SemanticException.h"
 #include "PascalSParser.h"
+#include <filesystem>
 
 CodeGenVisitor::CodeGenVisitor()
     : builder(context) {
@@ -17,9 +18,9 @@ CodeGenVisitor::~CodeGenVisitor() {
 
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
     // Create a new LLVM module
-    auto program_id_node = ctx->ID();
-    std::string program_name = program_id_node->getText();
-    module = std::make_unique<Module>(program_name, context);
+    std::filesystem::path filePath(filename);
+    std::string program_file_name = filePath.stem().string();
+    module = std::make_unique<Module>(program_file_name, context);
 
     llvm::FunctionType* main_func_type = llvm::FunctionType::get(Type::getInt32Ty(context), false);
     llvm::Function* main_func = llvm::Function::Create(main_func_type, llvm::Function::ExternalLinkage, "main", module.get());
@@ -843,7 +844,7 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
 }
 
 antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
-    std::cout << "visitVariable" << std::endl;
+
     // return: llvm::Value*
     // Retrieve the base identifier
     std::string varName = ctx->ID()->getText();
@@ -867,7 +868,7 @@ antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx)
             }
         }
     }
-    std::cout << "end Variable" << std::endl;
+
     return value;
 }
 
