@@ -26,6 +26,8 @@ private:
     std::string filename;
     BasicBlock* current_loop_end;
 
+    void InitBuiltins();
+
 public:
     std::unique_ptr<Module> module;
 

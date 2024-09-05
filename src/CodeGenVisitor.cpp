@@ -3,13 +3,29 @@
 #include "PascalSParser.h"
 #include <filesystem>
 
+static Function* printf_prototype(LLVMContext& ctx, Module* mod) {
+
+    FunctionType* printf_type = TypeBuilder<int(char*, ...), false>::get(getGlobalContext());
+
+    Function* func = cast<Function>(mod->getOrInsertFunction(
+        "printf", printf_type,
+        AttributeSet().addAttribute(mod->getContext(), 1U, Attribute::NoAlias)));
+
+    return func;
+}
+
+void CodeGenVisitor::InitBuiltins() {
+}
+
 CodeGenVisitor::CodeGenVisitor()
     : builder(context) {
+    InitBuiltins();
 }
 
 CodeGenVisitor::CodeGenVisitor(const std::string& filename)
     : builder(context)
     , filename(filename) {
+    InitBuiltins();
 }
 
 CodeGenVisitor::~CodeGenVisitor() {
@@ -999,7 +1015,37 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
         args.insert(args.end(), expr_list.begin(), expr_list.end());
     }
 
-    checkFunctionArgs(func_name, func, args);
+    if (func_name == "write") {
+        std::vector<Value*> printf_args;
+        // build printf_args based on the arguments
+        std::string format_string = "";
+        for (size_t i = 0; i < args.size(); ++i) {
+            if (args[i]->getType()->isIntegerTy()) {
+                format_string += "%d";
+            } else if (args[i]->getType()->isFloatTy()) {
+                format_string += "%f";
+            } else if (args[i]->getType()->isPointerTy()) {
+                format_string += "%p";
+            } else if (args[i]->getType()->isIntegerTy(1)) {
+                format_string += "%d";
+            } else {
+                throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                    "Unsupported argument type for printf");
+            }
+
+            if (i != args.size() - 1) {
+                format_string += " ";
+            }
+
+            printf_args.push_back(args[i]);
+        }
+        printf_args.insert(printf_args.begin(), builder.CreateGlobalStringPtr(format_string));
+        args = printf_args;
+        Function* printf_func = printf_prototype(context, module.get());
+        func = printf_func;
+    } else {
+        checkFunctionArgs(func_name, func, args);
+    }
 
     builder.CreateCall(func, args);
     return nullptr;
@@ -1070,12 +1116,10 @@ void CodeGenVisitor::checkType(llvm::Value* value, const std::string& context) {
 
 void CodeGenVisitor::checkFunctionArgs(std::string func_name, llvm::Function* func, std::vector<llvm::Value*>& args) {
     FunctionType* func_type = func->getFunctionType();
-
     // 参数个数检查
     if (args.size() != func_type->getNumParams()) {
         throw SemanticException("Incorrect number of arguments for function " + func_name + ". Expected " + std::to_string(func_type->getNumParams()) + ", but got " + std::to_string(args.size()) + ".");
     }
-
     // 参数类型检查
     for (size_t i = 0; i < args.size(); ++i) {
         Type* expected_type = func_type->getParamType(i);
