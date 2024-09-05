@@ -254,7 +254,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
     current_return_value = prev_return_value;
     builder.restoreIP(prev_insert_point);
 
-    scope->put(func->getName().str(), func);
+    subprogramScope->put(func->getName().str(), func);
 
     return nullptr;
 }
@@ -296,7 +296,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
 
     llvm::FunctionType* sub_program_type = llvm::FunctionType::get(return_type, param_types, false);
     llvm::Function* sub_program = llvm::Function::Create(sub_program_type, llvm::Function::ExternalLinkage, sub_program_name, module.get());
-    llvm::BasicBlock* sub_program_entry = llvm::BasicBlock::Create(context, sub_program_name + "Entry", sub_program);
+    llvm::BasicBlock* sub_program_entry = llvm::BasicBlock::Create(context, sub_program->getName() + "Entry", sub_program);
 
     // add parameters to scope
     int idx = 0;
@@ -317,6 +317,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
 
     if (ctx->FUNCTION()) {
         return_value = builder.CreateAlloca(return_type, nullptr, sub_program_name + "_return_value");
+        scope->put(sub_program_name, return_value);
         current_return_value = return_value;
     }
 
