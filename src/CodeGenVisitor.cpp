@@ -25,6 +25,11 @@ antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext
 
 antlrcpp::Any CodeGenVisitor::visitProgramBody(PascalSParser::ProgramBodyContext* ctx) {
     auto res = visitChildren(ctx);
+
+    if (current_return_value != nullptr && isa<AllocaInst>(current_return_value)) {
+        auto return_type = ((AllocaInst*)current_return_value)->getAllocatedType();
+        current_return_value = builder.CreateLoad(return_type, current_return_value);
+    }
     builder.CreateRet(current_return_value);
     return res;
 }
@@ -299,8 +304,8 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
         arg.setName(param_lists[idx].name);
 
         if (param_lists[idx].is_var) {
-            // TODO: check if this is correct
-            arg.addAttr(Attribute::ByRef);
+            // TODO: handle by reference parameters
+            // arg.addAttr(Attribute::ByRef);
         }
 
         scope->put(param_lists[idx].name, &arg);

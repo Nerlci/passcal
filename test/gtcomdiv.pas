@@ -1,5 +1,5 @@
 program test(input, output);
-var x,y: integer;
+var a,x,y: integer;
 function gtcomdiv (a,b:integer; var c:integer): integer;
 begin
 if b=0 then gtcomdiv:=a
