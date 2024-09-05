@@ -313,16 +313,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
     int idx = 0;
     for (auto& arg : sub_program->args()) {
         arg.setName(param_lists[idx].name);
-
-        // If the parameter is a reference, store the pointer in the scope
-        if (param_lists[idx].is_var) {
-            // Store pointer directly (do not dereference)
-            scope->put(param_lists[idx].name, &arg);
-        } else {
-            // Store the value directly
-            scope->put(param_lists[idx].name, &arg);
-        }
-
+        scope->put(param_lists[idx].name, &arg);
         idx++;
     }
 
