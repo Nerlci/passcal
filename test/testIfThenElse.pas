@@ -1,4 +1,4 @@
-program test_ifThenElse;
+program test(input,output);
 var 
     b: integer;
 function testfun(n: integer): integer;
