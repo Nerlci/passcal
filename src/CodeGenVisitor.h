@@ -29,6 +29,7 @@ public:
 
     CodeGenVisitor();
     CodeGenVisitor(const std::string& filename);
+    ~CodeGenVisitor();
 
     antlrcpp::Any visitProgramHead(PascalSParser::ProgramHeadContext* ctx) override;
     antlrcpp::Any visitProgramBody(PascalSParser::ProgramBodyContext* ctx) override;

@@ -11,6 +11,10 @@ CodeGenVisitor::CodeGenVisitor(const std::string& filename)
     , filename(filename) {
 }
 
+CodeGenVisitor::~CodeGenVisitor() {
+    delete scope;
+}
+
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
     // Create a new LLVM module
     auto program_id_node = ctx->ID();
@@ -266,7 +270,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
     llvm::Type* return_type = nullptr;
     llvm::Value* return_value = nullptr;
     if (ctx->PROCEDURE() != nullptr) {
-        return_type = Type::getVoidTy(context);
+        return_type = llvm::Type::getVoidTy(context);
     } else if (ctx->FUNCTION() != nullptr) {
         return_type = std::any_cast<llvm::Type*>(visit(ctx->standardType()));
     } else {
@@ -277,13 +281,21 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
     std::vector<SubprogramParameter> param_lists;
     std::vector<llvm::Type*> param_types;
     std::set<std::string> param_names;
+
     if (ctx->formalParameter()->parameterLists()) {
         param_lists = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->formalParameter()->parameterLists()));
 
         for (const auto& param : param_lists) {
-            param_types.push_back(param.type);
+            llvm::Type* param_type = param.type;
 
-            // check for duplicate parameter names
+            // Check for reference parameters (passed by var)
+            if (param.is_var) {
+                param_type = param_type->getPointerTo();
+            }
+
+            param_types.push_back(param_type);
+
+            // Check for duplicate parameter names
             if (param_names.find(param.name) != param_names.end()) {
                 throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
                     "Parameter '" + param.name + "' was already declared in this scope");
@@ -297,17 +309,20 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
     llvm::Function* sub_program = llvm::Function::Create(sub_program_type, llvm::Function::ExternalLinkage, sub_program_name, module.get());
     llvm::BasicBlock* sub_program_entry = llvm::BasicBlock::Create(context, sub_program_name + "Entry", sub_program);
 
-    // add parameters to scope
+    // Add parameters to scope
     int idx = 0;
     for (auto& arg : sub_program->args()) {
         arg.setName(param_lists[idx].name);
 
+        // If the parameter is a reference, store the pointer in the scope
         if (param_lists[idx].is_var) {
-            // TODO: handle by reference parameters
-            // arg.addAttr(Attribute::ByRef);
+            // Store pointer directly (do not dereference)
+            scope->put(param_lists[idx].name, &arg);
+        } else {
+            // Store the value directly
+            scope->put(param_lists[idx].name, &arg);
         }
 
-        scope->put(param_lists[idx].name, &arg);
         idx++;
     }
 
@@ -318,6 +333,14 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
         return_value = builder.CreateAlloca(return_type, nullptr, sub_program_name + "_return_value");
         current_return_value = return_value;
     }
+
+    // If you need to handle the dereferencing of var parameters
+    // Example: If you want to modify a reference parameter
+    // Assume you have a variable 'someVar' passed as var
+    // llvm::Value* someVarPtr = scope->get("someVar");
+    // llvm::Value* someVarValue = builder.CreateLoad(someVarPtr); // Load the original value
+    // ... Modify the value ...
+    // builder.CreateStore(modifiedValue, someVarPtr); // Store back the modified value
 
     return sub_program;
 }
