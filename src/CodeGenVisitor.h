@@ -21,6 +21,7 @@ private:
     LLVMContext context;
     IRBuilder<> builder;
     Scope* scope = new Scope();
+    Scope* subprogramScope = new Scope();
     llvm::Value* current_return_value = ConstantInt::get(context, APInt(32, 0));
     std::string filename;
     BasicBlock* current_loop_end;
@@ -30,6 +31,7 @@ public:
 
     CodeGenVisitor();
     CodeGenVisitor(const std::string& filename);
+    ~CodeGenVisitor();
 
     antlrcpp::Any visitProgramHead(PascalSParser::ProgramHeadContext* ctx) override;
     antlrcpp::Any visitProgramBody(PascalSParser::ProgramBodyContext* ctx) override;
