@@ -41,4 +41,5 @@ compile_commands.json
 .antlr/
 build/
 
+antlr4/
 .idea/
