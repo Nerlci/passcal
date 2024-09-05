@@ -80,9 +80,9 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
         bool negative = ctx->MINUS() != nullptr;
 
         std::string num_str = ctx->NUM()->getText();
-        if (num_str.find('.') != std::string::npos) {
-            double num = std::stod(num_str) * (negative ? -1 : 1);
-            value = ConstantFP::get(context, APFloat(num));
+        if (num_str.find('.') != std::string::npos || num_str.find('E') != std::string::npos || num_str.find('e') != std::string::npos) {
+            double num = std::stod(num_str);
+            value = llvm::ConstantFP::get(context, llvm::APFloat(num));
         } else {
             int num = std::stoi(num_str) * (negative ? -1 : 1);
             value = ConstantInt::get(context, APInt(32, num, !negative));
@@ -234,7 +234,7 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
     } else if (ctx->BOOLEAN() != nullptr) {
         type = Type::getInt1Ty(context);
     } else if (ctx->REAL() != nullptr) {
-        type = Type::getDoubleTy(context);
+        type = Type::getFloatTy(context);
     } else if (ctx->CHAR() != nullptr) {
         type = Type::getInt8Ty(context);
     } else {
@@ -665,37 +665,37 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
         rhs = loadIfAlloca(rhs);
 
         if (op == "=") {
-            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+            if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOEQ(lhs, rhs, "eqtmp");
             } else {
                 value = builder.CreateICmpEQ(lhs, rhs, "eqtmp");
             }
         } else if (op == "<>") {
-            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+            if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpONE(lhs, rhs, "netmp");
             } else {
                 value = builder.CreateICmpNE(lhs, rhs, "netmp");
             }
         } else if (op == "<") {
-            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+            if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOLT(lhs, rhs, "lttmp");
             } else {
                 value = builder.CreateICmpSLT(lhs, rhs, "lttmp");
             }
         } else if (op == "<=") {
-            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+            if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOLE(lhs, rhs, "letmp");
             } else {
                 value = builder.CreateICmpSLE(lhs, rhs, "letmp");
             }
         } else if (op == ">") {
-            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+            if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOGT(lhs, rhs, "gttmp");
             } else {
                 value = builder.CreateICmpSGT(lhs, rhs, "gttmp");
             }
         } else if (op == ">=") {
-            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+            if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOGE(lhs, rhs, "getmp");
             } else {
                 value = builder.CreateICmpSGE(lhs, rhs, "getmp");
@@ -795,12 +795,12 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
         lhs = loadIfAlloca(lhs);
         rhs = loadIfAlloca(rhs);
 
-        //        std::vector<llvm::Value*> convertedValues = convertToSameType(lhs, rhs);
-        //        lhs = convertedValues[0];
-        //        rhs = convertedValues[1];
-
         if (op == "*") {
-            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+            std::vector<llvm::Value*> convertedValues = castBinary(lhs, rhs);
+            lhs = convertedValues[0];
+            rhs = convertedValues[1];
+
+            if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFMul(lhs, rhs, "multmp");
             } else {
                 value = builder.CreateMul(lhs, rhs, "multmp");
@@ -854,17 +854,17 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
         rhs = loadIfAlloca(rhs);
 
         if (op == "+" || op == "-") {
-            //            std::vector<llvm::Value*> convertedValues = convertToSameType(lhs, rhs);
-            //            lhs = convertedValues[0];
-            //            rhs = convertedValues[1];
+            std::vector<llvm::Value*> convertedValues = castBinary(lhs, rhs);
+            lhs = convertedValues[0];
+            rhs = convertedValues[1];
             if (op == "+") {
-                if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+                if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                     value = builder.CreateFAdd(lhs, rhs, "addtmp");
                 } else {
                     value = builder.CreateAdd(lhs, rhs, "addtmp");
                 }
             } else if (op == "-") {
-                if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+                if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                     value = builder.CreateFSub(lhs, rhs, "subtmp");
                 } else {
                     value = builder.CreateSub(lhs, rhs, "subtmp");

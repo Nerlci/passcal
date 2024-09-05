@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "No input file specified.\n");
         return 1;
     }
-    std::string filename = argv[1];
+    std::string filename = argv[optind];
     std::ifstream stream;
     stream.open(filename);
     ANTLRInputStream input(stream);

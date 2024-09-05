@@ -19,7 +19,7 @@ begin
 
     x := 10.5;
     y := 20;
-    x := x + y;
+    x := x + a;
     x := x - y;
 
     flag := a < b;
