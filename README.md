@@ -30,7 +30,7 @@ sudo ./llvm.sh <version number> all
 sudo ./llvm.sh all
 ```
 
-In this project, we use llvm-18.
+In this project, we use llvm-14.
 
 ### ANTLR4
 
