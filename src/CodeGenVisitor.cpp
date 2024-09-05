@@ -70,7 +70,7 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
 
         if (global == nullptr) {
             throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-                "'" + identifier + "' was not declared in this scope or is not a constant");
+                "identifier '" + identifier + "' was not declared in this scope or is not a constant");
         } else {
             value = (llvm::ConstantInt*)global->getInitializer();
         }
@@ -507,18 +507,22 @@ antlrcpp::Any CodeGenVisitor::visitBranchList(PascalSParser::BranchListContext* 
 }
 
 antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) {
-    Scope* sub_program_scope = new Scope(scope);
     auto prev_insert_point = builder.saveIP();
     auto prev_return_value = current_return_value;
     auto prev_scope = scope;
+    auto prev_subprogram_scope = subprogram_scope;
 
-    scope = sub_program_scope;
+    Scope* new_scope = new Scope(scope);
+    Scope* new_subprogram_scope = new Scope(subprogram_scope);
+    scope = new_scope;
+    subprogram_scope = new_subprogram_scope;
 
     auto func = std::any_cast<llvm::Function*>(visit(ctx->subprogramHead()));
-    subprogram_scope->put(func->getName().str(), func);
+    prev_subprogram_scope->put(ctx->subprogramHead()->ID()->getText(), func);
     visit(ctx->programBody());
 
     scope = prev_scope;
+    subprogram_scope = prev_subprogram_scope;
     current_return_value = prev_return_value;
     builder.restoreIP(prev_insert_point);
 
@@ -527,8 +531,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
 
 // @return llvm::Function*
 antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadContext* ctx) {
-    auto sub_program_id_node = ctx->ID();
-    std::string sub_program_name = sub_program_id_node->getText();
+    std::string sub_program_name = ctx->ID()->getText();
 
     llvm::Type* return_type = nullptr;
     llvm::Value* return_value = nullptr;
@@ -545,7 +548,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
     std::vector<llvm::Type*> param_types;
     std::set<std::string> param_names;
 
-    if (ctx->formalParameter()->parameterLists()) {
+    if (ctx->formalParameter()->parameterLists() != nullptr) {
         param_lists = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->formalParameter()->parameterLists()));
 
         for (const auto& param : param_lists) {
@@ -722,7 +725,8 @@ antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignCons
         // 假设变量已经声明并在符号表中可用
         value = scope->get(var_name);
         if (value == nullptr) {
-            throw SemanticException("Undefined variable: " + var_name);
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "identifier '" + var_name + "' was not declared in this scope");
         }
     } else if (ctx->NUM()) {
         // 处理NUM
@@ -923,11 +927,13 @@ antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::Assignment
     Value* expr = std::any_cast<Value*>(visit(ctx->expression()));
 
     if (!var) {
-        throw SemanticException("Undefined variable in assignment.");
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "identifier '" + ctx->variable()->ID()->getText() + "' was not declared in this scope");
     }
 
     if (!expr) {
-        throw SemanticException("Failed to evaluate expression in assignment.");
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "Failed to evaluate expression '" + ctx->expression()->getText() + "'");
     }
 
     return builder.CreateStore(expr, var);
@@ -945,7 +951,8 @@ antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListC
 
     Value* exprValue = std::any_cast<Value*>(visit(ctx->expression()));
     if (!exprValue) {
-        throw SemanticException("Failed to evaluate expression in expression list.");
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "Failed to evaluate expression '" + ctx->expression()->getText() + "'");
     }
     expressions.push_back(exprValue);
 
@@ -959,12 +966,14 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
 
     // 作用域中无该符号
     if (!symbol) {
-        throw SemanticException("Undefined function: " + func_name);
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "identifier '" + func_name + "' was not declared in this scope");
     }
 
     // 该符号不是函数
     if (!llvm::isa<llvm::Function>(symbol)) {
-        throw SemanticException(func_name + " is not a function.");
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "'" + func_name + "' is not a function");
     }
 
     Function* func = llvm::cast<llvm::Function>(symbol);

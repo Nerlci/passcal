@@ -15,6 +15,14 @@ end;
 procedure SwapNoRef(a, b: integer);
 var
   temp: integer;
+  procedure aaa(a, b: integer);
+  var
+    temp: integer;
+  begin
+    temp := a;
+    a := b;
+    b := temp;
+  end;
 begin
   temp := a;
   a := b;
