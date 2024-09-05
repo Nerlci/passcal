@@ -738,7 +738,7 @@ antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
     } else if (ctx->ID() && ctx->LPAREN() && ctx->expressionList() && ctx->RPAREN()) {
         // Function call
         std::string funcName = ctx->ID()->getText();
-        Function* func = module->getFunction(funcName);
+        Function* func = (Function*)subprogramScope->get(funcName);
         if (!func) {
             // Not declared
             value = nullptr;
@@ -910,7 +910,7 @@ antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListC
 // 处理函数调用
 antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
     std::string func_name = ctx->ID()->getText();
-    Value* symbol = scope->get(func_name);
+    Value* symbol = subprogramScope->get(func_name);
 
     // 作用域中无该符号
     if (!symbol) {
@@ -930,7 +930,9 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
         args.insert(args.end(), expr_list.begin(), expr_list.end());
     }
 
-    return builder.CreateCall(func, args, "calltmp");
+    builder.CreateCall(func, args);
+
+    return nullptr;
 }
 
 Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
