@@ -63,6 +63,8 @@ public:
     antlrcpp::Any visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) override;
     antlrcpp::Any visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) override;
     antlrcpp::Any visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx) override;
+    antlrcpp::Any visitBoolean(PascalSParser::BooleanContext* ctx) override;
+    antlrcpp::Any visitVariable(PascalSParser::VariableContext* ctx) override;
 
     Value* getArrayElement(Value* array, std::vector<Value*> index);
     Value* getRecordElement(Value* record, std::string& field);
