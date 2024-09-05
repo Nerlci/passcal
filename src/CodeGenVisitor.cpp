@@ -923,6 +923,7 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
     }
 
     Function* func = llvm::cast<llvm::Function>(symbol);
+    FunctionType* func_type = func->getFunctionType();
 
     std::vector<Value*> args;
     if (ctx->expressionList()) {
@@ -930,8 +931,25 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
         args.insert(args.end(), expr_list.begin(), expr_list.end());
     }
 
-    builder.CreateCall(func, args);
+    // 参数个数检查
+    if (args.size() != func_type->getNumParams()) {
+        throw SemanticException("Incorrect number of arguments for function " + func_name +
+            ". Expected " + std::to_string(func_type->getNumParams()) +
+            ", but got " + std::to_string(args.size()) + ".");
+    }
 
+    // 参数类型检查
+    for (size_t i = 0; i < args.size(); ++i) {
+        Type* expected_type = func_type->getParamType(i);
+        Type* actual_type = args[i]->getType();
+
+        if (!expected_type->isPointerTy() && expected_type != actual_type) {
+            throw SemanticException("Argument type mismatch for parameter " + std::to_string(i + 1) +
+                " in function " + func_name + ".");
+        }
+    }
+
+    builder.CreateCall(func, args);
     return nullptr;
 }
 
