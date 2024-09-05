@@ -38,21 +38,14 @@ endif
 LINK := $(ANTLR_LIB) $(LLVM_LIBS)
 SOURCES := $(wildcard src/*.cpp)
 OBJECTS := $(SOURCES:src/%.cpp=build/obj/%.o)
-LIBS := $(wildcard stdlib/*.c)
 
 # Main target
 main: build/obj $(OBJECTS)
 	$(CC) $(OBJECTS) -o passcal $(LINK) $(CXXFLAGS)
 
-lib: build/lib $(LIBS)
-	$(C) -c $(LIBS) -o build/lib/stdlib.o
-
 # Ensure the obj and cfg directories exist
 build/obj:
 	mkdir -p build/obj build/cfg
-
-build/lib:
-	mkdir -p build/lib
 
 build/obj/%.o: src/%.cpp | build/obj
 	$(CC) $(ANTLR_INCLUDE) $(LLVM_INCLUDE) $(CXXFLAGS) -c $< -o $@
