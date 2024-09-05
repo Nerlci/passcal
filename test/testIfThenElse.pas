@@ -8,6 +8,4 @@ begin
 end;
 begin
     b := 10;
-    b := testfun(b);
-    writeln(b);
 end.

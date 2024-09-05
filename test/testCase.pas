@@ -3,8 +3,9 @@ var c,b: integer;
 begin
   c := 1;
   b := 1;
-  repeat
-    c := c + 1;
-    b := b * 2;
-  until c > 5;
+  case c of
+    1: c := 2;
+    2,3: c := 3;
+    4,5: c := 4
+  end;
 end.
