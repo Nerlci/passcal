@@ -1013,6 +1013,7 @@ Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) 
     }
 
     std::vector<Value*> offsetted_indices;
+    offsetted_indices.push_back(ConstantInt::get(context, APInt(32, 0)));
     for (int i = 0; i < array_info.size(); i++) {
         Value* start = ConstantInt::get(context, APInt(32, array_info[i].first));
         index[i] = loadIfPointer(index[i]);
