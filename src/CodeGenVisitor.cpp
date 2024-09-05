@@ -16,10 +16,13 @@ antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext
     auto program_id_node = ctx->ID();
     std::string program_name = program_id_node->getText();
     module = std::make_unique<Module>(program_name, context);
+
     llvm::FunctionType* main_func_type = llvm::FunctionType::get(Type::getInt32Ty(context), false);
     llvm::Function* main_func = llvm::Function::Create(main_func_type, llvm::Function::ExternalLinkage, "main", module.get());
     llvm::BasicBlock* main_entry = llvm::BasicBlock::Create(context, "mainEntry", main_func);
+
     builder.SetInsertPoint(main_entry);
+
     return visitChildren(ctx);
 }
 
@@ -232,6 +235,7 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
     } else {
         type = Type::getVoidTy(context);
     }
+
     return type;
 }
 
@@ -696,6 +700,287 @@ antlrcpp::Any CodeGenVisitor::visitValueParameter(PascalSParser::ValueParameterC
     }
 
     return params;
+}
+
+antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* ctx) {
+    // return: llvm::Value*
+    //    std::cout << "Visiting expression: " << ctx->getText() << std::endl;
+    llvm::Value* value = nullptr;
+    if (ctx->relationalOpreator()) {
+        llvm::Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
+        llvm::Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(1)));
+        std::string op = ctx->relationalOpreator()->getText();
+
+        if (isa<AllocaInst>(lhs)) {
+            lhs = builder.CreateLoad(((AllocaInst*)lhs)->getAllocatedType(), lhs, "loadlhs");
+        }
+        if (isa<AllocaInst>(rhs)) {
+            rhs = builder.CreateLoad(((AllocaInst*)rhs)->getAllocatedType(), rhs, "loadrhs");
+        }
+
+        if (op == "=") {
+            value = builder.CreateICmpEQ(lhs, rhs, "eqtmp");
+        } else if (op == "<>") {
+            value = builder.CreateICmpNE(lhs, rhs, "netmp");
+        } else if (op == "<") {
+            value = builder.CreateICmpSLT(lhs, rhs, "lttmp");
+        } else if (op == "<=") {
+            value = builder.CreateICmpSLE(lhs, rhs, "letmp");
+        } else if (op == ">") {
+            value = builder.CreateICmpSGT(lhs, rhs, "gttmp");
+        } else if (op == ">=") {
+            value = builder.CreateICmpSGE(lhs, rhs, "getmp");
+        }
+    } else {
+
+        //        std::cout << "end expr" << std::endl;
+        value = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
+    }
+
+    if (value != nullptr && isa<AllocaInst>(value)) {
+        Type* type = ((AllocaInst*) value)->getAllocatedType();
+        value = builder.CreateLoad(type, value);
+    }
+
+    return value;
+}
+
+antlrcpp::Any CodeGenVisitor::visitUnsignConstVariable(PascalSParser::UnsignConstVariableContext* ctx) {
+    //return: llvm::Value*
+    Value* value = nullptr;
+    //    std::cout << "unsignConsVar" << std::endl;
+    if (ctx->ID()) {
+        // 处理ID
+        std::string varName = ctx->ID()->getText();
+        // 假设变量已经声明并在符号表中可用
+        value = scope->get(varName);
+        // TODO: 如果变量未声明或不是标识符，需要报错
+    } else if (ctx->NUM()) {
+        // 处理NUM
+        std::string num_str = ctx->NUM()->getText();
+        if (num_str.find('.') != std::string::npos || num_str.find('E') != std::string::npos || num_str.find('e') != std::string::npos) {
+            double num = std::stod(num_str);
+            value = llvm::ConstantFP::get(context, llvm::APFloat(num));
+        } else {
+            int num = std::stoi(num_str);
+            value = llvm::ConstantInt::get(context, llvm::APInt(32, num));
+        }
+    }  else if (ctx->CHARLITERAL()) {
+        // 获取 CHARLITERAL 的文本值
+        std::string charLiteral = ctx->CHARLITERAL()->getText();
+        // 提取字符值（去掉引号）
+        char charValue = charLiteral[1];
+        // 创建一个 8 位的常量整数值
+        value = llvm::ConstantInt::get(context, llvm::APInt(8, charValue));
+    }
+    //    std::cout << "end unsignConsVar" << std::endl;
+    return value;
+}
+
+antlrcpp::Any CodeGenVisitor::visitFactor(PascalSParser::FactorContext* ctx) {
+    //return: llvm::Value*
+    //    std::cout << "factor" << std::endl;
+    Value* value = nullptr;
+    if(ctx->unsignConstVariable()){
+        value = std::any_cast<llvm::Value *>(visit(ctx->unsignConstVariable()));
+    } else if(ctx->variable()){
+        value = std::any_cast<llvm::Value *>(visit(ctx->variable()));
+    } else if(ctx->ID() && ctx->LPAREN() && ctx->expressionList() && ctx->RPAREN()){
+        // Function call
+        std::string funcName = ctx->ID()->getText();
+        Function* func = module->getFunction(funcName);
+        if(!func) {
+            // Not declared
+            value = nullptr;
+        } else{
+            // visit expressionList will return a vector of Value*
+            std::vector<Value*> args;
+            args = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
+            value = builder.CreateCall(func, args, "calltmp");
+        }
+    } else if(ctx->LPAREN() && ctx->expression() && ctx->RPAREN()){
+        value = std::any_cast<llvm::Value*>(visit(ctx->expression()));
+    } else if(ctx->NOT() && ctx->factor()){
+        llvm::Value* factorValue = std::any_cast<llvm::Value*>(visit(ctx->factor()));
+        if (isa<AllocaInst>(factorValue)) {
+            factorValue = builder.CreateLoad(((AllocaInst*)factorValue)->getAllocatedType(), factorValue, "loadlhs");
+        }
+        value = builder.CreateNot(factorValue, "nottmp");
+    } else if(ctx->boolean()){
+        value = std::any_cast<llvm::Value*>(visit(ctx->boolean()));
+    }
+    //    std::cout << "end factor" << std::endl;
+    return value;
+}
+
+antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx){
+    // return: llvm::Value*
+    //    std::cout << "term" << std::endl;
+    Value* value = nullptr;
+    if(ctx->multiplyOperator()){
+        Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->term()));
+        Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->factor()));
+        std::string op = ctx->multiplyOperator()->getText();
+        if (isa<AllocaInst>(lhs)) {
+            lhs = builder.CreateLoad(((AllocaInst*)lhs)->getAllocatedType(), lhs, "loadlhs");
+        }
+        if (isa<AllocaInst>(rhs)) {
+            rhs = builder.CreateLoad(((AllocaInst*)rhs)->getAllocatedType(), rhs, "loadrhs");
+        }
+
+        if (op == "*") {
+            value = builder.CreateMul(lhs, rhs, "multmp");
+        } else if (op == "div") {
+            value = builder.CreateSDiv(lhs, rhs, "divtmp");
+        } else if (op == "mod") {
+            value = builder.CreateSRem(lhs, rhs, "modtmp");
+        } else if (op == "and") {
+            value = builder.CreateAnd(lhs, rhs, "andtmp");
+        }
+    } else {
+        value = std::any_cast<llvm::Value*>(visit(ctx->factor()));
+    }
+    //    std::cout << "end term" << std::endl;
+    return value;
+}
+
+antlrcpp::Any CodeGenVisitor::visitBoolean(PascalSParser::BooleanContext* ctx) {
+    // return: llvm::Value*
+    Value* value = nullptr;
+    if(ctx->TRUE()){
+        value = llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 1);
+    } else if(ctx->FALSE()){
+        value = llvm::ConstantInt::get(llvm::Type::getInt1Ty(context), 0);
+    }
+
+    return value;
+}
+
+antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpressionContext* ctx){
+    // return: llvm::Value*
+    //    std::cout << "simpleExp" << std::endl;
+    Value* value = nullptr;
+    if(ctx->PLUS()||ctx->MINUS()){
+        Value* termValue = std::any_cast<llvm::Value*>(visit(ctx->term()));
+        if(ctx->PLUS()){
+            value = termValue;
+        } else if(ctx->MINUS()){
+            value = builder.CreateNeg(termValue, "negtmp");
+        }
+    } else if (ctx->addOperator()){
+        llvm::Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression()));
+        llvm::Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->term()));
+        std::string op = ctx->addOperator()->getText();
+
+        // Load the values if they are variables
+        if (isa<AllocaInst>(lhs)) {
+            lhs = builder.CreateLoad(((AllocaInst*)lhs)->getAllocatedType(), lhs, "loadlhs");
+        }
+        if (isa<AllocaInst>(rhs)) {
+            rhs = builder.CreateLoad(((AllocaInst*)rhs)->getAllocatedType(), rhs, "loadrhs");
+        }
+        if (op == "+") {
+            value = builder.CreateAdd(lhs, rhs, "addtmp");
+        } else if (op == "-") {
+            value = builder.CreateSub(lhs, rhs, "subtmp");
+        } else if (op == "or") {
+            value = builder.CreateOr(lhs, rhs, "ortmp");
+        }
+    } else{
+        value = std::any_cast<llvm::Value*>(visit(ctx->term()));
+    }
+    //    std::cout << "end simpleExp" << std::endl;
+    return value;
+}
+
+antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
+    std::cout<<"visitVariable"<<std::endl;
+    // return: llvm::Value*
+    // Retrieve the base identifier
+    std::string varName = ctx->ID()->getText();
+    llvm::Value* value = scope->get(varName);
+
+    // Retrieve the IdVarpartsContext
+    PascalSParser::IdVarpartsContext* idVarpartsCtx = ctx->idVarparts();
+
+    // Process each IdVarpartContext
+    for (size_t i = 0; i < idVarpartsCtx->children.size(); ++i) {
+        auto idVarpartCtx = dynamic_cast<PascalSParser::IdVarpartContext*>(idVarpartsCtx->children[i]);
+        if (idVarpartCtx) {
+            if (idVarpartCtx->LBRACKET()) {
+                // Handle array element access
+                std::vector<Value*> index = std::any_cast<std::vector<Value*>>(visit(idVarpartCtx->expressionList()));
+                value = getArrayElement(value, index);
+            } else if (idVarpartCtx->DOT()) {
+                // Handle record field access
+                std::string fieldName = idVarpartCtx->ID()->getText();
+                value = getRecordElement(value, fieldName);
+            }
+        }
+    }
+    std::cout<<"end Variable"<<std::endl;
+    return value;
+}
+
+// 处理赋值语句
+antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::AssignmentStatementContext* ctx) {
+    Value* var = std::any_cast<Value*>(visit(ctx->variable()));
+    Value* expr = std::any_cast<Value*>(visit(ctx->expression()));
+
+    if (!var) {
+        throw SemanticException("Undefined variable in assignment.");
+    }
+
+    if (!expr) {
+        throw SemanticException("Failed to evaluate expression in assignment.");
+    }
+
+    return builder.CreateStore(expr, var);
+}
+
+// 处理表达式列表
+antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListContext* ctx) {
+    std::vector<Value*> expressions;
+
+    // 假如有嵌套的表达式列表
+    if (ctx->expressionList()) {
+        auto nestedExpressions = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
+        expressions.insert(expressions.end(), nestedExpressions.begin(), nestedExpressions.end());
+    }
+
+    Value* exprValue = std::any_cast<Value*>(visit(ctx->expression()));
+    if (!exprValue) {
+        throw SemanticException("Failed to evaluate expression in expression list.");
+    }
+    expressions.push_back(exprValue);
+
+    return expressions;
+}
+
+// 处理函数调用
+antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
+    std::string func_name = ctx->ID()->getText();
+    Value* symbol = scope->get(func_name);
+
+    // 作用域中无该符号
+    if (!symbol) {
+        throw SemanticException("Undefined function: " + func_name);
+    }
+
+    // 该符号不是函数
+    if (!llvm::isa<llvm::Function>(symbol)) {
+        throw SemanticException(func_name + " is not a function.");
+    }
+
+    Function* func = llvm::cast<llvm::Function>(symbol);
+
+    std::vector<Value*> args;
+    if (ctx->expressionList()) {
+        auto expr_list = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
+        args.insert(args.end(), expr_list.begin(), expr_list.end());
+    }
+
+    return builder.CreateCall(func, args, "calltmp");
 }
 
 Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
