@@ -389,20 +389,42 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
         lhs = loadIfAlloca(lhs);
         rhs = loadIfAlloca(rhs);
 
-        checkType(lhs, "left-hand side of expression");
-        checkType(rhs, "right-hand side of expression");
         if (op == "=") {
-            value = builder.CreateICmpEQ(lhs, rhs, "eqtmp");
+            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+                value = builder.CreateFCmpOEQ(lhs, rhs, "eqtmp");
+            } else{
+                value = builder.CreateICmpEQ(lhs, rhs, "eqtmp");
+            }
         } else if (op == "<>") {
-            value = builder.CreateICmpNE(lhs, rhs, "netmp");
+            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+                value = builder.CreateFCmpONE(lhs, rhs, "netmp");
+            } else{
+                value = builder.CreateICmpNE(lhs, rhs, "netmp");
+            }
         } else if (op == "<") {
-            value = builder.CreateICmpSLT(lhs, rhs, "lttmp");
+            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+                value = builder.CreateFCmpOLT(lhs, rhs, "lttmp");
+            } else{
+                value = builder.CreateICmpSLT(lhs, rhs, "lttmp");
+            }
         } else if (op == "<=") {
-            value = builder.CreateICmpSLE(lhs, rhs, "letmp");
+            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+                value = builder.CreateFCmpOLE(lhs, rhs, "letmp");
+            } else{
+                value = builder.CreateICmpSLE(lhs, rhs, "letmp");
+            }
         } else if (op == ">") {
-            value = builder.CreateICmpSGT(lhs, rhs, "gttmp");
+            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+                value = builder.CreateFCmpOGT(lhs, rhs, "gttmp");
+            } else{
+                value = builder.CreateICmpSGT(lhs, rhs, "gttmp");
+            }
         } else if (op == ">=") {
-            value = builder.CreateICmpSGE(lhs, rhs, "getmp");
+            if (lhs->getType()->isDoubleTy() || rhs->getType()->isDoubleTy()) {
+                value = builder.CreateFCmpOGE(lhs, rhs, "getmp");
+            } else{
+                value = builder.CreateICmpSGE(lhs, rhs, "getmp");
+            }
         }
     } else {
         //        std::cout << "end expr" << std::endl;
@@ -509,6 +531,8 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx){
         } else if (op == "mod") {
             value = builder.CreateSRem(lhs, rhs, "modtmp");
         } else if (op == "and") {
+            checkType(lhs, "left-hand side of and expression");
+            checkType(rhs, "right-hand side of and expression");
             value = builder.CreateAnd(lhs, rhs, "andtmp");
         }
     } else {
@@ -561,8 +585,8 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
                 value = builder.CreateSub(lhs, rhs, "subtmp");
             }
         } else if (op == "or") {
-            checkType(lhs, "left-hand side of expression");
-            checkType(rhs, "right-hand side of expression");
+            checkType(lhs, "left-hand side of or expression");
+            checkType(rhs, "right-hand side of or expression");
             value = builder.CreateOr(lhs, rhs, "ortmp");
         }
     } else{
@@ -700,15 +724,13 @@ Value* CodeGenVisitor::loadIfAlloca(llvm::Value* value) {
     return value;
 }
 
-std::vector<llvm::Value*> CodeGenVisitor::convertToSameType(llvm::Value* lhs, llvm::Value* rhs) {
+std::vector<llvm::Value*> CodeGenVisitor::cast(llvm::Value* lhs, llvm::Value* rhs) {
     // function: Convert the values to the same type before binary operater
     llvm::Type* lhsType = lhs->getType();
     llvm::Type* rhsType = rhs->getType();
-
     if (lhsType == rhsType) {
         return {lhs, rhs}; // No conversion needed
     }
-
     if (lhsType->isIntegerTy() && rhsType->isFloatTy()) {
         lhs = builder.CreateSIToFP(lhs, rhsType, "intToFloat");
     } else if (lhsType->isFloatTy() && rhsType->isIntegerTy()) {
@@ -716,7 +738,6 @@ std::vector<llvm::Value*> CodeGenVisitor::convertToSameType(llvm::Value* lhs, ll
     } else {
         throw SemanticException("Type mismatch: cannot convert between incompatible types");
     }
-
     return {lhs, rhs};
 }
 

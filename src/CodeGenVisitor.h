@@ -69,7 +69,7 @@ public:
     Value* getArrayElement(Value* array, std::vector<Value*> index);
     Value* getRecordElement(Value* record, std::string& field);
     Value* loadIfAlloca(llvm::Value* value);
-    std::vector<llvm::Value*> convertToSameType(llvm::Value* lhs, llvm::Value* rhs);
+    std::vector<llvm::Value*> cast(llvm::Value* lhs, llvm::Value* rhs);
     void checkType(llvm::Value* value, const std::string& context);
 
     // Declare other visit methods as needed

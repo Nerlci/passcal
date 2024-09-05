@@ -1,13 +1,8 @@
-program testExpressions(input, output);
+program testexpressions(input, output);
 var
     a, b, c: integer;
     x, y: real;
     flag: boolean;
-    arr: array[1..5] of integer;
-    rec: record
-            x: integer;
-            y: real
-    end;
 begin
     a := 10;
     b := 20;
@@ -26,7 +21,8 @@ begin
     flag := a = b;
     flag := a <> b;
 
+    flag := (a < b) and (x < y);
+    flag := (a < b) or (x < y);
+
     flag := a <> b;
-    rec.x := 15;
-    arr[4] := 10;
 end.
