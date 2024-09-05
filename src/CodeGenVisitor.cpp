@@ -988,7 +988,7 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
 
     if (StandardProcedure::hasProcedure(func_name)) {
         auto stdProcedure = StandardProcedure::prototypeMap[func_name](module.get());
-        StandardProcedure::argsConstructorMap[func_name](&builder, args);
+        StandardProcedure::argsConstructorMap[func_name](filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(), &builder, args);
         llvm::ArrayRef<llvm::Value*> argsRef(args);
         builder.CreateCall(stdProcedure, argsRef);
     } else {

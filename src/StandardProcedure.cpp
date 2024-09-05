@@ -91,6 +91,5 @@ void StandardProcedure::writelnArgsConstructor(std::string filename, int line, i
         }
     }
     format_string += "\n";
-    std::cout << format_string << std::endl;
     args.insert(args.begin(), builder->CreateGlobalStringPtr(format_string));
 }
