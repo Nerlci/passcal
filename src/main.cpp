@@ -28,6 +28,8 @@ int main(int argc, char* argv[]) {
         switch (opt) {
         case 'h':
             // 当用户输入 --help 时打印帮助信息
+            printf("passcal - Pascal-S Compiler\n");
+            printf("Version: 0.1\n");
             printf("Usage: %s [options] input_file\n", argv[0]);
             printf("Options:\n");
             printf("  -h, --help            Display this information.\n");
