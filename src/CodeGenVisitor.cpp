@@ -1,5 +1,6 @@
 #include "CodeGenVisitor.h"
 #include "Exception/SemanticException.h"
+#include "PascalSParser.h"
 
 CodeGenVisitor::CodeGenVisitor()
         : builder(context) {
@@ -12,36 +13,33 @@ CodeGenVisitor::CodeGenVisitor(const std::string& filename)
 
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
     // Create a new LLVM module
-    auto program_id_node = ctx->identifier();
+    auto program_id_node = ctx->ID();
     std::string program_name = program_id_node->getText();
     module = std::make_unique<Module>(program_name, context);
-
-    llvm::FunctionType* mainFuncType = llvm::FunctionType::get(Type::getInt32Ty(context), false);
-    llvm::Function* mainFunc = llvm::Function::Create(mainFuncType, llvm::Function::ExternalLinkage, "main", module.get());
-    llvm::BasicBlock* mainEntry = llvm::BasicBlock::Create(context, "mainEntry", mainFunc);
-
-    builder.SetInsertPoint(mainEntry);
-
+    llvm::FunctionType* main_func_type = llvm::FunctionType::get(Type::getInt32Ty(context), false);
+    llvm::Function* main_func = llvm::Function::Create(main_func_type, llvm::Function::ExternalLinkage, "main", module.get());
+    llvm::BasicBlock* main_entry = llvm::BasicBlock::Create(context, "mainEntry", main_func);
+    builder.SetInsertPoint(main_entry);
     return visitChildren(ctx);
 }
 
 antlrcpp::Any CodeGenVisitor::visitProgramBody(PascalSParser::ProgramBodyContext* ctx) {
-    visitChildren(ctx);
+    auto res = visitChildren(ctx);
 
-    // Return 0 at the end of the program
-    // TODO: Return different values for procedures and functions
-    builder.CreateRet(ConstantInt::get(Type::getInt32Ty(context), 0));
-
-    return nullptr;
+    if (current_return_value != nullptr && isa<AllocaInst>(current_return_value)) {
+        auto return_type = ((AllocaInst*)current_return_value)->getAllocatedType();
+        current_return_value = builder.CreateLoad(return_type, current_return_value);
+    }
+    builder.CreateRet(current_return_value);
+    return res;
 }
 
 antlrcpp::Any CodeGenVisitor::visitConstDeclaration(PascalSParser::ConstDeclarationContext* ctx) {
-    // Generate LLVM IR for constant declaration
     if (ctx->constDeclaration() != nullptr) {
         visit(ctx->constDeclaration());
     }
 
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     llvm::Value* value = std::any_cast<llvm::Value*>(visit(ctx->constVariable()));
 
     module->getOrInsertGlobal(identifier, value->getType());
@@ -56,11 +54,10 @@ antlrcpp::Any CodeGenVisitor::visitConstDeclaration(PascalSParser::ConstDeclarat
 
 // @return llvm::Value*
 antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableContext* ctx) {
-    // Generate LLVM IR for constant variable
     llvm::Value* value = nullptr;
 
-    if (ctx->identifier() != nullptr) {
-        std::string identifier = ctx->identifier()->getText();
+    if (ctx->ID() != nullptr) {
+        std::string identifier = ctx->ID()->getText();
         auto global = module->getNamedGlobal(identifier);
 
         if (global == nullptr) {
@@ -84,8 +81,8 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
         }
     }
 
-    if (ctx->LETTER() != nullptr) {
-        char letter = ctx->LETTER()->getText()[0];
+    if (ctx->CHARLITERAL() != nullptr) {
+        char letter = ctx->CHARLITERAL()->getText()[1];
         value = ConstantInt::get(context, APInt(8, letter));
     }
 
@@ -93,12 +90,11 @@ antlrcpp::Any CodeGenVisitor::visitConstVariable(PascalSParser::ConstVariableCon
 }
 
 antlrcpp::Any CodeGenVisitor::visitTypeDeclaration(PascalSParser::TypeDeclarationContext* ctx) {
-    // Generate LLVM IR for type declaration
     if (ctx->typeDeclaration() != nullptr) {
         visit(ctx->typeDeclaration());
     }
 
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     llvm::Type* type = std::any_cast<llvm::Type*>(visit(ctx->type()));
 
     llvm::StructType* type_struct = llvm::StructType::create(context, "type_" + identifier);
@@ -109,7 +105,6 @@ antlrcpp::Any CodeGenVisitor::visitTypeDeclaration(PascalSParser::TypeDeclaratio
 }
 
 antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclarationsContext* ctx) {
-    // Generate LLVM IR for variable declarations
     if (ctx->varDeclaration() != nullptr) {
         auto var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
 
@@ -127,7 +122,6 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclaration
 
 // @return std::map<std::string, llvm::Type*>
 antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationContext* ctx) {
-    // Generate LLVM IR for variable declaration
     std::map<std::string, llvm::Type*> var_declarations;
     if (ctx->varDeclaration() != nullptr) {
         auto prev_var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
@@ -151,9 +145,8 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationC
 
 // @return std::vector<std::string>
 antlrcpp::Any CodeGenVisitor::visitIdentifierList(PascalSParser::IdentifierListContext* ctx) {
-    // Generate LLVM IR for identifier list
     std::vector<std::string> identifiers;
-    std::string identifier = ctx->identifier()->getText();
+    std::string identifier = ctx->ID()->getText();
     identifiers.push_back(identifier);
 
     if (ctx->identifierList() != nullptr) {
@@ -166,7 +159,6 @@ antlrcpp::Any CodeGenVisitor::visitIdentifierList(PascalSParser::IdentifierListC
 
 // @return llvm::Type*
 antlrcpp::Any CodeGenVisitor::visitType(PascalSParser::TypeContext* ctx) {
-    // Generate LLVM IR for type
     llvm::Type* type = nullptr;
     if (ctx->standardType() != nullptr) {
         type = std::any_cast<llvm::Type*>(visit(ctx->standardType()));
@@ -204,7 +196,6 @@ antlrcpp::Any CodeGenVisitor::visitType(PascalSParser::TypeContext* ctx) {
 
 // @return std::vector<std::pair<int, int>>
 antlrcpp::Any CodeGenVisitor::visitPeriods(PascalSParser::PeriodsContext* ctx) {
-    // Generate LLVM IR for periods
     std::vector<std::pair<int, int>> periods;
     if (ctx->periods() != nullptr) {
         auto next_periods = std::any_cast<std::vector<std::pair<int, int>>>(visit(ctx->periods()));
@@ -219,7 +210,6 @@ antlrcpp::Any CodeGenVisitor::visitPeriods(PascalSParser::PeriodsContext* ctx) {
 
 // @return std::pair<int, int>
 antlrcpp::Any CodeGenVisitor::visitPeriod(PascalSParser::PeriodContext* ctx) {
-    // Generate LLVM IR for period
     auto start_const = (llvm::Constant*)std::any_cast<llvm::Value*>(visit(ctx->constVariable(0)));
     auto end_const = (llvm::Constant*)std::any_cast<llvm::Value*>(visit(ctx->constVariable(1)));
     int start = start_const->getUniqueInteger().getLimitedValue();
@@ -230,7 +220,6 @@ antlrcpp::Any CodeGenVisitor::visitPeriod(PascalSParser::PeriodContext* ctx) {
 
 // @return llvm::Type*
 antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeContext* ctx) {
-    // Generate LLVM IR for standard type
     llvm::Type* type = nullptr;
     if (ctx->INTEGER() != nullptr) {
         type = Type::getInt32Ty(context);
@@ -243,13 +232,12 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
     } else {
         type = Type::getVoidTy(context);
     }
-
     return type;
 }
 
 antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* ctx) {
     // return: llvm::Value*
-//    std::cout << "Visiting expression: " << ctx->getText() << std::endl;
+    //    std::cout << "Visiting expression: " << ctx->getText() << std::endl;
     llvm::Value* value = nullptr;
     if (ctx->relationalOpreator()) {
         llvm::Value* left = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
@@ -414,16 +402,6 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
 antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx) {
     std::cout<<"visitVariable"<<std::endl;
     // return: llvm::Value*
-
-//    初始化 value 为变量的基地址
-//      for 每个 idVarpart in idVarpartsCtx:
-//          if idVarpart 是数组索引:
-//              计算数组元素的地址
-//              更新 value 为新的地址
-//          else if idVarpart 是记录字段:
-//              计算字段的偏移量
-//              更新 value 为新的地址
-//      返回 value
     // Retrieve the base identifier
     std::string varName = ctx->identifier()->getText();
     llvm::Value* value = scope->get(varName);
@@ -451,13 +429,149 @@ antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx)
 }
 
 // Implement other visit methods as needed
+
+antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) {
+    Scope* sub_program_scope = new Scope(scope);
+    auto prev_insert_point = builder.saveIP();
+    auto prev_return_value = current_return_value;
+    auto prev_scope = scope;
+
+    scope = sub_program_scope;
+
+    auto func = std::any_cast<llvm::Function*>(visit(ctx->subprogramHead()));
+    scope->put(func->getName().str(), func);
+    visit(ctx->programBody());
+
+    scope = prev_scope;
+    current_return_value = prev_return_value;
+    builder.restoreIP(prev_insert_point);
+
+    return nullptr;
+}
+
+// @return llvm::Function*
+antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadContext* ctx) {
+    auto sub_program_id_node = ctx->ID();
+    std::string sub_program_name = sub_program_id_node->getText();
+
+    llvm::Type* return_type = nullptr;
+    llvm::Value* return_value = nullptr;
+    if (ctx->PROCEDURE() != nullptr) {
+        return_type = Type::getVoidTy(context);
+    } else if (ctx->FUNCTION() != nullptr) {
+        return_type = std::any_cast<llvm::Type*>(visit(ctx->standardType()));
+    } else {
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "Subprogram declaration must be either a function or a procedure");
+    }
+
+    std::vector<SubprogramParameter> param_lists;
+    std::vector<llvm::Type*> param_types;
+    std::set<std::string> param_names;
+    if (ctx->formalParameter()->parameterLists()) {
+        param_lists = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->formalParameter()->parameterLists()));
+
+        for (const auto& param : param_lists) {
+            param_types.push_back(param.type);
+
+            // check for duplicate parameter names
+            if (param_names.find(param.name) != param_names.end()) {
+                throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                    "Parameter '" + param.name + "' was already declared in this scope");
+            }
+
+            param_names.insert(param.name);
+        }
+    }
+
+    llvm::FunctionType* sub_program_type = llvm::FunctionType::get(return_type, param_types, false);
+    llvm::Function* sub_program = llvm::Function::Create(sub_program_type, llvm::Function::ExternalLinkage, sub_program_name, module.get());
+    llvm::BasicBlock* sub_program_entry = llvm::BasicBlock::Create(context, sub_program_name + "Entry", sub_program);
+
+    // add parameters to scope
+    int idx = 0;
+    for (auto& arg : sub_program->args()) {
+        arg.setName(param_lists[idx].name);
+
+        if (param_lists[idx].is_var) {
+            // TODO: handle by reference parameters
+            // arg.addAttr(Attribute::ByRef);
+        }
+
+        scope->put(param_lists[idx].name, &arg);
+        idx++;
+    }
+
+    current_return_value = return_value;
+    builder.SetInsertPoint(sub_program_entry);
+
+    if (ctx->FUNCTION()) {
+        return_value = builder.CreateAlloca(return_type, nullptr, sub_program_name + "_return_value");
+        current_return_value = return_value;
+    }
+
+    return sub_program;
+}
+
+antlrcpp::Any CodeGenVisitor::visitParameterLists(PascalSParser::ParameterListsContext* ctx) {
+    std::vector<SubprogramParameter> param_lists;
+    if (ctx->parameterLists() != nullptr) {
+        auto prev_param_lists = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->parameterLists()));
+        param_lists.insert(param_lists.begin(), prev_param_lists.begin(), prev_param_lists.end());
+    }
+
+    auto param_list = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->parameterList()));
+    param_lists.insert(param_lists.end(), param_list.begin(), param_list.end());
+
+    return param_lists;
+}
+
+// @return std::vector<SubprogramParameter>
+antlrcpp::Any CodeGenVisitor::visitParameterList(PascalSParser::ParameterListContext* ctx) {
+    std::vector<SubprogramParameter> param_list;
+
+    if (ctx->varParameter() != nullptr) {
+        param_list = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->varParameter()));
+    } else if (ctx->valueParameter() != nullptr) {
+        param_list = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->valueParameter()));
+    } else {
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "Parameter list must be either a value or var parameter");
+    }
+
+    return param_list;
+}
+
+// @return std::vector<SubprogramParameter>
+antlrcpp::Any CodeGenVisitor::visitVarParameter(PascalSParser::VarParameterContext* ctx) {
+    auto param_list = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->valueParameter()));
+
+    for (auto& param : param_list) {
+        param.is_var = true;
+    }
+
+    return param_list;
+}
+
+// @return std::vector<std::pair<std::string, llvm::Type*>>
+antlrcpp::Any CodeGenVisitor::visitValueParameter(PascalSParser::ValueParameterContext* ctx) {
+    std::vector<std::string> identifiers = std::any_cast<std::vector<std::string>>(visit(ctx->identifierList()));
+    llvm::Type* type = std::any_cast<llvm::Type*>(visit(ctx->standardType()));
+
+    std::vector<SubprogramParameter> params;
+    for (const auto& identifier : identifiers) {
+        params.push_back({ identifier, type, false });
+    }
+
+    return params;
+}
+
 Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) {
-    // Generate LLVM IR for getting array element
     Type* array_type = ((AllocaInst*)array)->getAllocatedType();
     std::vector<std::pair<int, int>> array_info = scope->getArray(array_type);
-    // if (array_info.size() != index.size()) {
-    //     throw SemanticException(filename, 0, 0, "Array index count mismatch");
-    // }
+    if (array_info.size() != index.size()) {
+        throw SemanticException(filename, 0, 0, "Array index count mismatch");
+    }
 
     std::vector<Value*> offsetted_indices;
     for (int i = 0; i < array_info.size(); i++) {
@@ -470,71 +584,13 @@ Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) 
 }
 
 Value* CodeGenVisitor::getRecordElement(Value* record, std::string& field) {
-    // Generate LLVM IR for getting record element
     Type* record_type = ((AllocaInst*)record)->getAllocatedType();
     std::map<std::string, int> record_info = scope->getRecord(record_type);
     int index = record_info[field];
 
-    // if (index == -1) {
-    //     throw SemanticException(filename, 0, 0, "Field '" + field + "' not found in record");
-    // }
+    if (index == -1) {
+        throw SemanticException(filename, 0, 0, "Field '" + field + "' not found in record");
+    }
 
     return builder.CreateStructGEP(record_type, record, index);
 }
-//// 处理赋值语句
-//antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::AssignmentStatementContext* ctx) {
-//    std::cout<<"visitAssignmentStatement"<<std::endl;
-//    Value* var = std::any_cast<Value*>(visit(ctx->variable()));
-//    Value* expr = std::any_cast<Value*>(visit(ctx->expression()));
-//
-//    if (!var) {
-//        // 变量未定义
-//        return nullptr;
-//    }
-//    std::cout<<"end AssignmentStatement"<<std::endl;
-//    return builder.CreateStore(expr, var);
-//}
-//
-//// 处理表达式列表
-//antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListContext* ctx) {
-//    std::cout<<"visitExpressionList"<<std::endl;
-//    std::vector<Value*> expressions;
-//
-//    // 假如有嵌套的表达式列表
-//    if (ctx->expressionList()) {
-//        auto nestedExpressions = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
-//        expressions.insert(expressions.end(), nestedExpressions.begin(), nestedExpressions.end());
-//    }
-//
-//    Value* exprValue = std::any_cast<Value*>(visit(ctx->expression()));
-//    expressions.push_back(exprValue);
-//    std::cout<<"end visitExpressionList"<<std::endl;
-//    return expressions;
-//}
-//
-//// 处理函数调用
-//antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
-//    std::cout<<"visitCallProcedureStatement"<<std::endl;
-//    std::string func_name = ctx->identifier()->getText();
-//    Value* symbol = scope->get(func_name);
-//
-//    // 作用域中无该符号
-//    if (!symbol) {
-//        return nullptr;
-//    }
-//
-//    // 该符号不是函数
-//    if (!llvm::isa<llvm::Function>(symbol)) {
-//        return nullptr;
-//    }
-//
-//    Function* func = llvm::cast<llvm::Function>(symbol);
-//
-//    std::vector<Value*> args;
-//    if (ctx->expressionList()) {
-//        auto expr_list = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
-//        args.insert(args.end(), expr_list.begin(), expr_list.end());
-//    }
-//    std::cout<<"end visitCallProcedureStatement"<<std::endl;
-//    return builder.CreateCall(func, args, "calltmp");
-//}

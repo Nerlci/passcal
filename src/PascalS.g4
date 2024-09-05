@@ -3,34 +3,33 @@ import PascalSLexerRules;
 
 program: programHead programBody DOT;
 
-programHead:
-	PROGRAM identifier LPAREN identifierList RPAREN SEMICOLON;
+programHead: PROGRAM ID LPAREN identifierList RPAREN SEMICOLON;
 
 programBody:
 	constDeclarations typeDeclarations varDeclarations subprogramDeclarations compoundStatement;
 
-identifierList: identifierList COMMA identifier | identifier;
+identifierList: identifierList COMMA ID | ID;
 
 constDeclarations: CONST constDeclaration SEMICOLON |;
 
 constDeclaration:
-	constDeclaration SEMICOLON identifier EQUAL constVariable
-	| identifier EQUAL constVariable;
+	constDeclaration SEMICOLON ID EQUAL constVariable
+	| ID EQUAL constVariable;
 
 constVariable:
-	PLUS identifier
-	| MINUS identifier
-	| identifier
+	PLUS ID
+	| MINUS ID
+	| ID
 	| PLUS NUM
 	| MINUS NUM
 	| NUM
-	| QUOTE LETTER QUOTE;
+	| CHARLITERAL;
 
 typeDeclarations: TYPE typeDeclaration SEMICOLON |;
 
 typeDeclaration:
-	typeDeclaration SEMICOLON identifier EQUAL type
-	| identifier EQUAL type;
+	typeDeclaration SEMICOLON ID EQUAL type
+	| ID EQUAL type;
 
 type:
 	standardType
@@ -58,8 +57,8 @@ subprogramDeclarations:
 subprogramDeclaration: subprogramHead programBody SEMICOLON;
 
 subprogramHead:
-	FUNCTION identifier formalParameter COLON standardType SEMICOLON
-	| PROCEDURE identifier formalParameter SEMICOLON;
+	FUNCTION ID formalParameter COLON standardType SEMICOLON
+	| PROCEDURE ID formalParameter SEMICOLON;
 
 formalParameter: LPAREN parameterLists RPAREN |;
 
@@ -78,21 +77,21 @@ compoundStatement: BEGIN statementList END;
 statementList: statementList SEMICOLON statement | statement;
 
 statement:
-	variable ASSIGNOP expression										# assignmentStatement
-	| callProcedureStatement											# statementCallProcedureStatement
-	| compoundStatement													# statementCompoundStatement
-	| IF expression THEN statement elsePart								# ifStatement
-	| CASE expression OF caseBody END									# caseStatement
-	| WHILE expression DO statement										# whileStatement
-	| REPEAT statementList UNTIL expression								# repeatStatement
-	| FOR identifier ASSIGNOP expression updown expression DO statement	# forStatement
-	|																	# emptyStatement;
+	variable ASSIGNOP expression								# assignmentStatement
+	| callProcedureStatement									# statementCallProcedureStatement
+	| compoundStatement											# statementCompoundStatement
+	| IF expression THEN statement elsePart						# ifStatement
+	| CASE expression OF caseBody END							# caseStatement
+	| WHILE expression DO statement								# whileStatement
+	| REPEAT statementList UNTIL expression						# repeatStatement
+	| FOR ID ASSIGNOP expression updown expression DO statement	# forStatement
+	|															# emptyStatement;
 
-variable: identifier idVarparts;
+variable: ID idVarparts;
 
 idVarparts: idVarparts idVarpart |;
 
-idVarpart: LBRACKET expressionList RBRACKET | DOT identifier;
+idVarpart: LBRACKET expressionList RBRACKET | DOT ID;
 
 elsePart: ELSE statement |;
 
@@ -106,9 +105,7 @@ constList: constList COMMA constVariable | constVariable;
 
 updown: TO | DOWNTO;
 
-callProcedureStatement:
-	identifier
-	| identifier LPAREN expressionList RPAREN;
+callProcedureStatement: ID | ID LPAREN expressionList RPAREN;
 
 expressionList: expressionList COMMA expression | expression;
 
@@ -129,14 +126,12 @@ boolean: TRUE | FALSE;
 factor:
 	unsignConstVariable
 	| variable
-	| identifier LPAREN expressionList RPAREN
+	| ID LPAREN expressionList RPAREN
 	| LPAREN expression RPAREN
 	| NOT factor
 	| boolean;
 
-unsignConstVariable: identifier | NUM | QUOTE LETTER QUOTE;
-
-identifier: LETTER (LETTER | DIGIT)*;
+unsignConstVariable: ID | NUM | CHARLITERAL;
 
 relationalOpreator: EQUAL | '<>' | '<' | '<=' | '>' | '>=';
 
