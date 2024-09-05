@@ -55,6 +55,9 @@ public:
     Value* getRecordElement(Value* record, std::string& field);
 
     // Declare other visit methods as needed
+    antlrcpp::Any visitAssignmentStatement(PascalSParser::AssignmentStatementContext* ctx) override;
+    antlrcpp::Any visitExpressionList(PascalSParser::ExpressionListContext* ctx) override;
+    antlrcpp::Any visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) override;
 };
 
 #endif // CODEGENVISITOR_H
