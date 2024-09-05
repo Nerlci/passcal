@@ -246,7 +246,7 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
 
 antlrcpp::Any CodeGenVisitor::visitIfStatement(PascalSParser::IfStatementContext* ctx) {
     // 访问条件表达式
-    llvm::Value* condition = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    llvm::Value* condition = std::any_cast<llvm::Value*>(visit(ctx->expression()));
 
     // 创建基本块：then和else
     llvm::Function* parentFunction = builder.GetInsertBlock()->getParent();
@@ -291,10 +291,10 @@ antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementConte
     std::string loopVar = ctx->ID()->getText();
 
     // Get the initial value
-    Value* initValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(0)));
+    Value* initValue = std::any_cast<llvm::Value*>(visit(ctx->expression(0)));
 
     // Get the final value
-    Value* finalValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(1)));
+    Value* finalValue = std::any_cast<llvm::Value*>(visit(ctx->expression(1)));
 
     // Determine if it's counting up or down
     bool countUp = ctx->updown()->getText() == "to";
@@ -353,7 +353,7 @@ antlrcpp::Any CodeGenVisitor::visitWhileStatement(PascalSParser::WhileStatementC
     builder.SetInsertPoint(conditionBB);
 
     // 访问条件表达式
-    Value* condition = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    Value* condition = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     // 创建条件跳转
     builder.CreateCondBr(condition, loopBB, afterBB);
 
@@ -394,7 +394,7 @@ antlrcpp::Any CodeGenVisitor::visitRepeatStatement(PascalSParser::RepeatStatemen
     builder.SetInsertPoint(conditionBB);
 
     // Generate code for the condition
-    Value* conditionValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    Value* conditionValue = std::any_cast<llvm::Value*>(visit(ctx->expression()));
 
     // Create conditional branch
     // If condition is false (0), continue looping. If true (1), exit the loop.
@@ -422,7 +422,7 @@ antlrcpp::Any CodeGenVisitor::visitCaseStatement(PascalSParser::CaseStatementCon
     BasicBlock* switchBB = BasicBlock::Create(context, "switchBB", function);
 
     // 访问 case 的表达式，获取其值
-    Value* caseValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression()));
+    Value* caseValue = std::any_cast<llvm::Value*>(visit(ctx->expression()));
 
     // 开始switch语句
     builder.CreateBr(switchBB);
