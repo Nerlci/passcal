@@ -236,7 +236,6 @@ antlrcpp::Any CodeGenVisitor::visitStandardType(PascalSParser::StandardTypeConte
 }
 
 antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* ctx) {
-    return builder.CreateICmpEQ(builder.getInt32(0), builder.getInt32(0), "eqtmp");
     // return: llvm::Value*
     //    std::cout << "Visiting expression: " << ctx->getText() << std::endl;
     llvm::Value* value = nullptr;
@@ -349,11 +348,17 @@ antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementConte
     // 循环变量
     std::string loopVar = ctx->ID()->getText();
 
+    std::cerr << "expression:" << ctx->expression(0)->getText() << std::endl;
+
     // Get the initial value
     Value* initValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(0)));
 
+    std::cerr << "initValue: " << std::endl;
+
     // Get the final value
     Value* finalValue = std::any_cast<llvm::Value*>(visitExpression(ctx->expression(1)));
+
+    std::cerr << "finalValue: " << std::endl;
 
     // Determine if it's counting up or down
     bool countUp = ctx->updown()->getText() == "to";
