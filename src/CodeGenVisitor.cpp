@@ -951,6 +951,17 @@ antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::Assignment
             "Failed to evaluate expression '" + ctx->expression()->getText() + "'");
     }
 
+    Type* varType = cast<PointerType>(var->getType())->getPointerElementType();
+
+    if (varType != expr->getType()) {
+        if (varType->isFloatTy() && expr->getType()->isIntegerTy()) {
+            expr = builder.CreateSIToFP(expr, varType, "intToFloat");
+        } else {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "Type mismatch: cannot assign " + ctx->expression()->getText() + " to " + ctx->variable()->getText());
+        }
+    }
+
     return builder.CreateStore(expr, var);
 }
 
