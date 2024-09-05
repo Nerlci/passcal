@@ -2,8 +2,9 @@ C := gcc
 CC := g++
 ANTLR_INCLUDE := -I/usr/local/include/antlr4-runtime
 ANTLR_LIB := -L/usr/local/lib -lantlr4-runtime
-LLVM_INCLUDE := -I/usr/include/llvm-18 -I/usr/include/llvm-c-18
-LLVM_CONFIG := /usr/lib/llvm-18/bin/llvm-config
+LLVM_VERSION := 14
+LLVM_INCLUDE := -I/usr/include/llvm-$(LLVM_VERSION) -I/usr/include/llvm-c-$(LLVM_VERSION)
+LLVM_CONFIG := /usr/lib/llvm-$(LLVM_VERSION)/bin/llvm-config
 LLVM_LIBS := $(shell $(LLVM_CONFIG) --libs)
 LLVM_CXXFLAGS := -std=c++17 -funwind-tables -D_GNU_SOURCE -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
 

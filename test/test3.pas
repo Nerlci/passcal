@@ -15,15 +15,21 @@ end;
 procedure SwapNoRef(a, b: integer);
 var
   temp: integer;
+
+  procedure aaa(x: integer);
+  begin
+    a := 10;
+  end;
 begin
   temp := a;
   a := b;
   b := temp;
+  aaa(10);
 end;
 
 begin
   x := 5;
   y := 10;
-  write(x);
-  write(y);
+  SwapNoRef(x, y);
+  aaa(10);
 end.
