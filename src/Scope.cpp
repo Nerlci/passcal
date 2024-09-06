@@ -45,3 +45,9 @@ std::map<std::string, int> Scope::getRecord(const llvm::Type* type) {
     }
     return {};
 }
+
+bool Scope::declared(const std::string& name) {
+    std::string transformed_name = name;
+    std::transform(transformed_name.begin(), transformed_name.end(), transformed_name.begin(), ::tolower);
+    return table.find(transformed_name) != table.end();
+}
