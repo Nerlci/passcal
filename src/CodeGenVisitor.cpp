@@ -987,6 +987,11 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
     std::string func_name = ctx->ID()->getText();
 
     if (StandardProcedure::hasProcedure(func_name)) {
+        if (func_name != "read" && func_name != "readln") {
+            for (auto& arg : args) {
+                arg = loadIfPointer(arg);
+            }
+        }
         auto stdProcedure = StandardProcedure::prototypeMap[func_name](module.get());
         StandardProcedure::argsConstructorMap[func_name](filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(), &builder, args);
         llvm::ArrayRef<llvm::Value*> argsRef(args);

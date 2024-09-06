@@ -10,8 +10,32 @@ std::unordered_map<std::string, void (*)(std::string filename, int line, int col
 void StandardProcedure::init() {
     prototypeMap["write"] = writelnPrototype;
     prototypeMap["read"] = readlnPrototype;
-    argsConstructorMap["write"] = writelnArgsConstructor;
-    argsConstructorMap["read"] = readlnArgsConstructor;
+    prototypeMap["writeln"] = writelnPrototype;
+    prototypeMap["readln"] = readlnPrototype;
+    argsConstructorMap["write"] = writeArgsConstructor;
+    argsConstructorMap["read"] = readArgsConstructor;
+    argsConstructorMap["writeln"] = writelnArgsConstructor;
+    argsConstructorMap["readln"] = readlnArgsConstructor;
+}
+
+std::string StandardProcedure::getFormatString(llvm::Type* type) {
+    if (type->isIntegerTy(8)) {
+        return "%c";
+    } else if (type->isFloatTy()) {
+        return "%f";
+    } else if (type->isPointerTy()) {
+        return "%p";
+    } else if (type->isIntegerTy(1)) {
+        return "%d";
+    } else if (type->isIntegerTy()) {
+        return "%d";
+    } else {
+        std::string type_str;
+        llvm::raw_string_ostream rso(type_str);
+        type->print(rso);
+        rso.flush();
+        throw std::runtime_error("Unsupported argument type '" + type_str + "' for write");
+    }
 }
 
 bool StandardProcedure::hasProcedure(std::string name) {
@@ -27,30 +51,22 @@ llvm::Function* StandardProcedure::readlnPrototype(llvm::Module* module) {
     return func;
 }
 
+void StandardProcedure::readArgsConstructor(std::string filename, int line, int column, llvm::IRBuilder<>* builder, std::vector<llvm::Value*>& args) {
+    std::string format_string = "";
+    for (size_t i = 0; i < args.size(); ++i) {
+        llvm::Type* arg_type = llvm::cast<llvm::PointerType>(args[i]->getType())->getPointerElementType();
+        format_string += getFormatString(arg_type);
+    }
+    args.insert(args.begin(), builder->CreateGlobalStringPtr(format_string));
+}
+
 void StandardProcedure::readlnArgsConstructor(std::string filename, int line, int column, llvm::IRBuilder<>* builder, std::vector<llvm::Value*>& args) {
     std::string format_string = "";
     for (size_t i = 0; i < args.size(); ++i) {
-        if (args[i]->getType()->isIntegerTy(8)) {
-            format_string += "%c";
-        } else if (args[i]->getType()->isFloatTy()) {
-            format_string += "%f";
-        } else if (args[i]->getType()->isPointerTy()) {
-            format_string += "%p";
-        } else if (args[i]->getType()->isIntegerTy(1)) {
-            format_string += "%d";
-        } else if (args[i]->getType()->isIntegerTy()) {
-            format_string += "%d";
-        } else {
-            std::string type_str;
-            llvm::raw_string_ostream rso(type_str);
-            args[i]->getType()->print(rso);
-            rso.flush();
-            throw SemanticException(filename, line, column, "Unsupported argument type '" + type_str + "' for read");
-        }
-        if (i != args.size() - 1) {
-            format_string += " ";
-        }
+        llvm::Type* arg_type = llvm::cast<llvm::PointerType>(args[i]->getType())->getPointerElementType();
+        format_string += getFormatString(arg_type);
     }
+    format_string += "\n";
     args.insert(args.begin(), builder->CreateGlobalStringPtr(format_string));
 }
 
@@ -66,29 +82,20 @@ llvm::Function* StandardProcedure::writelnPrototype(llvm::Module* module) {
     return func;
 }
 
+void StandardProcedure::writeArgsConstructor(std::string filename, int line, int column, llvm::IRBuilder<>* builder, std::vector<llvm::Value*>& args) {
+    std::string format_string = "";
+    for (size_t i = 0; i < args.size(); ++i) {
+        llvm::Type* arg_type = args[i]->getType();
+        format_string += getFormatString(arg_type);
+    }
+    args.insert(args.begin(), builder->CreateGlobalStringPtr(format_string));
+}
+
 void StandardProcedure::writelnArgsConstructor(std::string filename, int line, int column, llvm::IRBuilder<>* builder, std::vector<llvm::Value*>& args) {
     std::string format_string = "";
     for (size_t i = 0; i < args.size(); ++i) {
-        if (args[i]->getType()->isIntegerTy(8)) {
-            format_string += "%c";
-        } else if (args[i]->getType()->isFloatTy()) {
-            format_string += "%f";
-        } else if (args[i]->getType()->isPointerTy()) {
-            format_string += "%p";
-        } else if (args[i]->getType()->isIntegerTy(1)) {
-            format_string += "%d";
-        } else if (args[i]->getType()->isIntegerTy()) {
-            format_string += "%d";
-        } else {
-            std::string type_str;
-            llvm::raw_string_ostream rso(type_str);
-            args[i]->getType()->print(rso);
-            rso.flush();
-            throw SemanticException(filename, line, column, "Unsupported argument type '" + type_str + "' for write");
-        }
-        if (i != args.size() - 1) {
-            format_string += " ";
-        }
+        llvm::Type* arg_type = args[i]->getType();
+        format_string += getFormatString(arg_type);
     }
     format_string += "\n";
     args.insert(args.begin(), builder->CreateGlobalStringPtr(format_string));
