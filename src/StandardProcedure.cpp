@@ -87,6 +87,9 @@ void StandardProcedure::writeArgsConstructor(std::string filename, int line, int
     for (size_t i = 0; i < args.size(); ++i) {
         llvm::Type* arg_type = args[i]->getType();
         format_string += getFormatString(arg_type);
+        if (arg_type->isFloatTy()) {
+            args[i] = builder->CreateFPExt(args[i], llvm::Type::getDoubleTy(builder->getContext()));
+        }
     }
     args.insert(args.begin(), builder->CreateGlobalStringPtr(format_string));
 }
@@ -96,6 +99,9 @@ void StandardProcedure::writelnArgsConstructor(std::string filename, int line, i
     for (size_t i = 0; i < args.size(); ++i) {
         llvm::Type* arg_type = args[i]->getType();
         format_string += getFormatString(arg_type);
+        if (arg_type->isFloatTy()) {
+            args[i] = builder->CreateFPExt(args[i], llvm::Type::getDoubleTy(builder->getContext()));
+        }
     }
     format_string += "\n";
     args.insert(args.begin(), builder->CreateGlobalStringPtr(format_string));
