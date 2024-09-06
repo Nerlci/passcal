@@ -1135,17 +1135,20 @@ void CodeGenVisitor::checkFunctionArgs(std::string func_name, llvm::Function* fu
         if (!expected_type->isPointerTy() && actual_type->isPointerTy()) {
             args[i] = loadIfPointer(args[i]);
             actual_type = args[i]->getType();
-        } else if (expected_type->isPointerTy() && actual_type->isPointerTy()) {
+        }
+
+        if (expected_type->isFloatTy() && actual_type->isIntegerTy()) {
+            args[i] = builder.CreateSIToFP(args[i], expected_type, "intToFloat");
+            actual_type = args[i]->getType();
+        }
+
+        if (expected_type->isPointerTy() && actual_type->isPointerTy()) {
             expected_type = cast<PointerType>(expected_type)->getPointerElementType();
             actual_type = cast<PointerType>(actual_type)->getPointerElementType();
         }
 
         if (expected_type != actual_type) {
-            if (expected_type->isFloatTy() && actual_type->isIntegerTy()) {
-                args[i] = builder.CreateSIToFP(args[i], expected_type, "intToFloat");
-            } else {
-                throw SemanticException("argument type mismatch for parameter " + std::to_string(i + 1) + " in function " + func_name + ".");
-            }
+            throw SemanticException("argument type mismatch for parameter " + std::to_string(i + 1) + " in function " + func_name + ".");
         }
     }
 }
