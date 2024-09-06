@@ -1,14 +1,14 @@
-program testExpressions(input, output);
-var
+proGram testExpressions(input, output);
+Var
     a, b, c: integer;
     x, y: real;
     flag: boolean;
     arr: array[1..5, 5..10] of integer;
-    rec: record
-            x: integer;
-            y: real
-    end;
-begin
+    rec: reCord
+            x: inTeger;
+            y: reAl
+    eNd;
+bEgiN
     a := 10;
     b := 20;
     c := a + b;
@@ -28,9 +28,9 @@ begin
     flag := a <> b;
 
     rec.y := a;
-    a := 4;
+    A := 4;
     arr[a, 5] := 10;
-    writeln(rec.y, ' ', arr[a, 5]);
+    wrITeln(rEc.Y, ' ', arr[a, 5]);
     writeln(a, ' ', b, ' ', c, ' ', x, ' ', y);
     writeln(flag);
-end.
+eNd.
