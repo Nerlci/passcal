@@ -15,14 +15,6 @@ end;
 procedure SwapNoRef(a, b: integer);
 var
   temp: integer;
-  procedure aaa(a, b: integer);
-  var
-    temp: integer;
-  begin
-    temp := a;
-    a := b;
-    b := temp;
-  end;
 begin
   temp := a;
   a := b;
@@ -34,4 +26,6 @@ begin
   y := 10;
   Swap(x,y);
   SwapNoRef(x,y);
+  writeln(x);
+  writeln(y);
 end.

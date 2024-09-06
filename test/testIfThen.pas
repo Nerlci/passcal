@@ -1,6 +1,8 @@
 program test(input,output);
 var 
   a: integer;
+  b: real;
+  c: boolean;
 begin
   a := 1;
   b := 1.5;

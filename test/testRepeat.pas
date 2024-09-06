@@ -7,4 +7,5 @@ begin
     c := c + 1;
     b := b * 2;
   until c > 5;
+  writeln(c, ' ', b);
 end.

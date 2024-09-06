@@ -1082,13 +1082,14 @@ Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) 
 Value* CodeGenVisitor::getRecordElement(Value* record, std::string& field) {
     Type* record_type = ((AllocaInst*)record)->getAllocatedType();
     std::map<std::string, int> record_info = scope->getRecord(record_type);
-    int index = record_info[field];
+    std::transform(field.begin(), field.end(), field.begin(), ::tolower);
+    auto index = record_info.find(field);
 
-    if (index == -1) {
+    if (index == record_info.end()) {
         throw SemanticException(filename, 0, 0, "field '" + field + "' not found in record");
     }
 
-    return builder.CreateStructGEP(record_type, record, index);
+    return builder.CreateStructGEP(record_type, record, index->second);
 }
 
 Value* CodeGenVisitor::loadIfPointer(llvm::Value* value) {

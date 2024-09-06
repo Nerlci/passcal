@@ -11,20 +11,15 @@ type
   end;
 var
   a,b:integer;
-  c,d:integer;
+  b,d:integer;
   arr:array[1..10, 1..20] of integer;
   rec:record
     a:integer;
     b:char
   end;
-  recc:record
-    a:integer;
-    c:char
-  end;
+  write: integer;
 begin
     read(a);
     read(b);
-    writeln(b);
-    writeln(e);
-    writeln(f);
+    write(b);
 end.
