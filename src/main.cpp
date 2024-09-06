@@ -61,6 +61,12 @@ int main(int argc, char* argv[]) {
     std::string filename = argv[optind];
     std::ifstream stream;
     stream.open(filename);
+
+    if (!stream.is_open()) {
+        llvm::errs() << "Could not open file: " << filename << "\n";
+        return 1;
+    }
+
     ANTLRInputStream input(stream);
     PascalSLexer lexer(&input);
     CommonTokenStream tokens(&lexer);
