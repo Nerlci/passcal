@@ -1,6 +1,9 @@
 #include "CodeGenVisitor.h"
 #include "Exception/SemanticException.h"
 #include "PascalSParser.h"
+#include "StandardProcedure.h"
+#include "llvm/IR/DerivedTypes.h"
+#include <cstdarg>
 #include <filesystem>
 
 CodeGenVisitor::CodeGenVisitor()
@@ -987,32 +990,40 @@ antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListC
 
 // 处理函数调用
 antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallProcedureStatementContext* ctx) {
-    std::string func_name = ctx->ID()->getText();
-    Value* symbol = subprogram_scope->get(func_name);
-
-    // 作用域中无该符号
-    if (!symbol) {
-        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-            "identifier '" + func_name + "' was not declared in this scope");
-    }
-
-    // 该符号不是函数
-    if (!llvm::isa<llvm::Function>(symbol)) {
-        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-            "'" + func_name + "' is not a function");
-    }
-
-    Function* func = llvm::cast<llvm::Function>(symbol);
-
     std::vector<Value*> args;
     if (ctx->expressionList()) {
         auto expr_list = std::any_cast<std::vector<Value*>>(visit(ctx->expressionList()));
         args.insert(args.end(), expr_list.begin(), expr_list.end());
     }
+    std::string func_name = ctx->ID()->getText();
 
-    checkFunctionArgs(func_name, func, args);
+    if (StandardProcedure::hasProcedure(func_name)) {
+        if (func_name != "read" && func_name != "readln") {
+            for (auto& arg : args) {
+                arg = loadIfPointer(arg);
+            }
+        }
+        auto stdProcedure = StandardProcedure::prototypeMap[func_name](module.get());
+        StandardProcedure::argsConstructorMap[func_name](filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(), &builder, args);
+        llvm::ArrayRef<llvm::Value*> argsRef(args);
+        builder.CreateCall(stdProcedure, argsRef);
+    } else {
+        Value* symbol = subprogram_scope->get(func_name);
+        // 作用域中无该符号
+        if (!symbol) {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "identifier '" + func_name + "' was not declared in this scope");
+        }
 
-    builder.CreateCall(func, args);
+        // 该符号不是函数
+        if (!llvm::isa<llvm::Function>(symbol)) {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "'" + func_name + "' is not a function");
+        }
+        Function* func = llvm::cast<llvm::Function>(symbol);
+        checkFunctionArgs(func_name, func, args);
+        builder.CreateCall(func, args);
+    }
     return nullptr;
 }
 
@@ -1082,12 +1093,10 @@ void CodeGenVisitor::checkType(llvm::Value* value, const std::string& context) {
 
 void CodeGenVisitor::checkFunctionArgs(std::string func_name, llvm::Function* func, std::vector<llvm::Value*>& args) {
     FunctionType* func_type = func->getFunctionType();
-
     // 参数个数检查
     if (args.size() != func_type->getNumParams()) {
         throw SemanticException("Incorrect number of arguments for function " + func_name + ". Expected " + std::to_string(func_type->getNumParams()) + ", but got " + std::to_string(args.size()) + ".");
     }
-
     // 参数类型检查
     for (size_t i = 0; i < args.size(); ++i) {
         Type* expected_type = func_type->getParamType(i);

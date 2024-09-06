@@ -10,6 +10,7 @@
 #include "CodeGenVisitor.h"
 #include "PascalSLexer.h"
 #include "PascalSParser.h"
+#include "StandardProcedure.h"
 
 using namespace antlr4;
 
@@ -66,6 +67,8 @@ int main(int argc, char* argv[]) {
     PascalSParser parser(&tokens);
 
     tree::ParseTree* tree = parser.program();
+
+    StandardProcedure::init();
 
     CodeGenVisitor codeGen(filename);
 

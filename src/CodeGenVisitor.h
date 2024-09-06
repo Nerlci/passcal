@@ -3,6 +3,7 @@
 
 #include "PascalSBaseVisitor.h"
 #include "Scope.h"
+#include "StandardProcedure.h"
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LLVMContext.h>
 #include <llvm/IR/Module.h>
@@ -18,6 +19,7 @@ struct SubprogramParameter {
 
 class CodeGenVisitor : public PascalSBaseVisitor {
 private:
+    StandardProcedure standard_procedure;
     LLVMContext context;
     IRBuilder<> builder;
     Scope* scope = new Scope();
@@ -25,6 +27,8 @@ private:
     llvm::Value* current_return_value = ConstantInt::get(context, APInt(32, 0));
     std::string filename;
     BasicBlock* current_loop_end;
+
+    void InitBuiltins();
 
 public:
     std::unique_ptr<Module> module;
