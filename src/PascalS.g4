@@ -133,7 +133,7 @@ factor:
 
 unsignConstVariable: ID | NUM | CHARLITERAL;
 
-relationalOpreator: EQUAL | '<>' | '<' | '<=' | '>' | '>=';
+relationalOpreator: EQUAL | NEQUAL | LT | LE | GT | GE;
 
 addOperator: PLUS | MINUS | OR;
 

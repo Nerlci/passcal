@@ -8,15 +8,22 @@
 
 CodeGenVisitor::CodeGenVisitor()
     : builder(context) {
+    for (const auto& [name, prototype] : StandardProcedure::prototypeMap) {
+        subprogram_scope->put(name, nullptr);
+    }
 }
 
 CodeGenVisitor::CodeGenVisitor(const std::string& filename)
     : builder(context)
     , filename(filename) {
+    for (const auto& [name, prototype] : StandardProcedure::prototypeMap) {
+        subprogram_scope->put(name, nullptr);
+    }
 }
 
 CodeGenVisitor::~CodeGenVisitor() {
     delete scope;
+    delete subprogram_scope;
 }
 
 antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext* ctx) {
@@ -125,6 +132,11 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclaration
         auto var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
 
         for (const auto& var_declaration : var_declarations) {
+            if (scope->get(var_declaration.first) || subprogram_scope->get(var_declaration.first)) {
+                throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                    "identifier '" + var_declaration.first + "' was already declared in this scope");
+            }
+
             std::string identifier = var_declaration.first;
             llvm::Type* type = var_declaration.second;
 
@@ -150,7 +162,7 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclaration(PascalSParser::VarDeclarationC
     for (const auto& identifier : identifiers) {
         if (var_declarations.find(identifier) != var_declarations.end()) {
             throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-                "'" + identifier + "' was already declared in this scope");
+                "identifier '" + identifier + "' was already declared in this scope");
         }
 
         var_declarations[identifier] = type;
@@ -306,7 +318,7 @@ antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementConte
     Value* finalValue = std::any_cast<llvm::Value*>(visit(ctx->expression(1)));
 
     // Determine if it's counting up or down
-    bool countUp = ctx->updown()->getText() == "to";
+    bool countUp = ctx->updown()->DOWNTO() == nullptr;
 
     // Create basic blocks
     Function* function = builder.GetInsertBlock()->getParent();
@@ -519,6 +531,12 @@ antlrcpp::Any CodeGenVisitor::visitBranchList(PascalSParser::BranchListContext* 
 }
 
 antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) {
+    std::string subprogram_name = ctx->subprogramHead()->ID()->getText();
+    if (scope->get(subprogram_name) || subprogram_scope->get(subprogram_name)) {
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "identifier '" + subprogram_name + "' was already declared in this scope");
+    }
+
     auto prev_insert_point = builder.saveIP();
     auto prev_return_value = current_return_value;
     auto prev_scope = scope;
@@ -530,7 +548,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
     subprogram_scope = new_subprogram_scope;
 
     auto func = std::any_cast<llvm::Function*>(visit(ctx->subprogramHead()));
-    prev_subprogram_scope->put(ctx->subprogramHead()->ID()->getText(), func);
+    prev_subprogram_scope->put(subprogram_name, func);
     visit(ctx->programBody());
 
     scope = prev_scope;
@@ -553,7 +571,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
         return_type = std::any_cast<llvm::Type*>(visit(ctx->standardType()));
     } else {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-            "Subprogram declaration must be either a function or a procedure");
+            "subprogram declaration must be either a function or a procedure");
     }
 
     std::vector<SubprogramParameter> param_lists;
@@ -576,7 +594,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
             // Check for duplicate parameter names
             if (param_names.find(param.name) != param_names.end()) {
                 throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-                    "Parameter '" + param.name + "' was already declared in this scope");
+                    "parameter '" + param.name + "' was already declared in this scope");
             }
 
             param_names.insert(param.name);
@@ -638,7 +656,7 @@ antlrcpp::Any CodeGenVisitor::visitParameterList(PascalSParser::ParameterListCon
         param_list = std::any_cast<std::vector<SubprogramParameter>>(visit(ctx->valueParameter()));
     } else {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-            "Parameter list must be either a value or var parameter");
+            "parameter list must be either a value or var parameter");
     }
 
     return param_list;
@@ -673,7 +691,7 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
     if (ctx->relationalOpreator()) {
         llvm::Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(0)));
         llvm::Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression(1)));
-        std::string op = ctx->relationalOpreator()->getText();
+        auto op = ctx->relationalOpreator();
 
         lhs = loadIfPointer(lhs);
         rhs = loadIfPointer(rhs);
@@ -682,37 +700,37 @@ antlrcpp::Any CodeGenVisitor::visitExpression(PascalSParser::ExpressionContext* 
         lhs = converted_values[0];
         rhs = converted_values[1];
 
-        if (op == "=") {
+        if (op->EQUAL() != nullptr) {
             if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOEQ(lhs, rhs, "eqtmp");
             } else {
                 value = builder.CreateICmpEQ(lhs, rhs, "eqtmp");
             }
-        } else if (op == "<>") {
+        } else if (op->NEQUAL() != nullptr) {
             if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpONE(lhs, rhs, "netmp");
             } else {
                 value = builder.CreateICmpNE(lhs, rhs, "netmp");
             }
-        } else if (op == "<") {
+        } else if (op->LT() != nullptr) {
             if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOLT(lhs, rhs, "lttmp");
             } else {
                 value = builder.CreateICmpSLT(lhs, rhs, "lttmp");
             }
-        } else if (op == "<=") {
+        } else if (op->LE() != nullptr) {
             if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOLE(lhs, rhs, "letmp");
             } else {
                 value = builder.CreateICmpSLE(lhs, rhs, "letmp");
             }
-        } else if (op == ">") {
+        } else if (op->GT() != nullptr) {
             if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOGT(lhs, rhs, "gttmp");
             } else {
                 value = builder.CreateICmpSGT(lhs, rhs, "gttmp");
             }
-        } else if (op == ">=") {
+        } else if (op->GE() != nullptr) {
             if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                 value = builder.CreateFCmpOGE(lhs, rhs, "getmp");
             } else {
@@ -813,12 +831,12 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
     if (ctx->multiplyOperator()) {
         Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->term()));
         Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->factor()));
-        std::string op = ctx->multiplyOperator()->getText();
+        auto op = ctx->multiplyOperator();
 
         lhs = loadIfPointer(lhs);
         rhs = loadIfPointer(rhs);
 
-        if (op == "*") {
+        if (op->MULT() != nullptr) {
             std::vector<llvm::Value*> converted_values = castBinary(lhs, rhs);
             lhs = converted_values[0];
             rhs = converted_values[1];
@@ -828,11 +846,22 @@ antlrcpp::Any CodeGenVisitor::visitTerm(PascalSParser::TermContext* ctx) {
             } else {
                 value = builder.CreateMul(lhs, rhs, "multmp");
             }
-        } else if (op == "div") {
-            value = builder.CreateSDiv(lhs, rhs, "divtmp");
-        } else if (op == "mod") {
+        } else if (op->DIVIDE() != nullptr) {
+            std::vector<llvm::Value*> converted_values = castBinary(lhs, rhs);
+            lhs = converted_values[0];
+            rhs = converted_values[1];
+
+            if (!lhs->getType()->isFloatTy() || !rhs->getType()->isFloatTy()) {
+                throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                    "division is only allowed for real numbers");
+            }
+
+            value = builder.CreateFDiv(lhs, rhs, "divtmp");
+        } else if (op->DIV() != nullptr) {
+            value = builder.CreateSDiv(lhs, rhs, "sdivtmp");
+        } else if (op->MOD() != nullptr) {
             value = builder.CreateSRem(lhs, rhs, "modtmp");
-        } else if (op == "and") {
+        } else if (op->AND() != nullptr) {
             checkType(lhs, "left-hand side of and expression");
             checkType(rhs, "right-hand side of and expression");
             value = builder.CreateAnd(lhs, rhs, "andtmp");
@@ -874,30 +903,30 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
     } else if (ctx->addOperator()) {
         llvm::Value* lhs = std::any_cast<llvm::Value*>(visit(ctx->simpleExpression()));
         llvm::Value* rhs = std::any_cast<llvm::Value*>(visit(ctx->term()));
-        std::string op = ctx->addOperator()->getText();
+        auto op = ctx->addOperator();
 
         // Load the values if they are variables
         lhs = loadIfPointer(lhs);
         rhs = loadIfPointer(rhs);
 
-        if (op == "+" || op == "-") {
+        if (op->PLUS() != nullptr || op->MINUS() != nullptr) {
             std::vector<llvm::Value*> converted_values = castBinary(lhs, rhs);
             lhs = converted_values[0];
             rhs = converted_values[1];
-            if (op == "+") {
+            if (op->PLUS() != nullptr) {
                 if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                     value = builder.CreateFAdd(lhs, rhs, "addtmp");
                 } else {
                     value = builder.CreateAdd(lhs, rhs, "addtmp");
                 }
-            } else if (op == "-") {
+            } else if (op->MINUS() != nullptr) {
                 if (lhs->getType()->isFloatTy() || rhs->getType()->isFloatTy()) {
                     value = builder.CreateFSub(lhs, rhs, "subtmp");
                 } else {
                     value = builder.CreateSub(lhs, rhs, "subtmp");
                 }
             }
-        } else if (op == "or") {
+        } else if (op->OR() != nullptr) {
             checkType(lhs, "left-hand side of or expression");
             checkType(rhs, "right-hand side of or expression");
             value = builder.CreateOr(lhs, rhs, "ortmp");
@@ -951,7 +980,7 @@ antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::Assignment
 
     if (!expr) {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-            "Failed to evaluate expression '" + ctx->expression()->getText() + "'");
+            "failed to evaluate expression '" + ctx->expression()->getText() + "'");
     }
 
     Type* varType = cast<PointerType>(var->getType())->getPointerElementType();
@@ -961,7 +990,7 @@ antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::Assignment
             expr = builder.CreateSIToFP(expr, varType, "intToFloat");
         } else {
             throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-                "Type mismatch: cannot assign " + ctx->expression()->getText() + " to " + ctx->variable()->getText());
+                "type mismatch: cannot assign " + ctx->expression()->getText() + " to " + ctx->variable()->getText());
         }
     }
 
@@ -981,7 +1010,7 @@ antlrcpp::Any CodeGenVisitor::visitExpressionList(PascalSParser::ExpressionListC
     Value* exprValue = std::any_cast<Value*>(visit(ctx->expression()));
     if (!exprValue) {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
-            "Failed to evaluate expression '" + ctx->expression()->getText() + "'");
+            "failed to evaluate expression '" + ctx->expression()->getText() + "'");
     }
     expressions.push_back(exprValue);
 
@@ -998,6 +1027,7 @@ antlrcpp::Any CodeGenVisitor::visitCallProcedureStatement(PascalSParser::CallPro
     std::string func_name = ctx->ID()->getText();
 
     if (StandardProcedure::hasProcedure(func_name)) {
+        std::transform(func_name.begin(), func_name.end(), func_name.begin(), ::tolower);
         if (func_name != "read" && func_name != "readln") {
             for (auto& arg : args) {
                 arg = loadIfPointer(arg);
@@ -1031,7 +1061,7 @@ Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) 
     Type* array_type = ((AllocaInst*)array)->getAllocatedType();
     std::vector<std::pair<int, int>> array_info = scope->getArray(array_type);
     if (array_info.size() != index.size()) {
-        throw SemanticException(filename, 0, 0, "Array index count mismatch");
+        throw SemanticException(filename, 0, 0, "array index count mismatch");
     }
 
     std::vector<Value*> offsetted_indices;
@@ -1052,7 +1082,7 @@ Value* CodeGenVisitor::getRecordElement(Value* record, std::string& field) {
     int index = record_info[field];
 
     if (index == -1) {
-        throw SemanticException(filename, 0, 0, "Field '" + field + "' not found in record");
+        throw SemanticException(filename, 0, 0, "field '" + field + "' not found in record");
     }
 
     return builder.CreateStructGEP(record_type, record, index);
@@ -1078,7 +1108,7 @@ std::vector<llvm::Value*> CodeGenVisitor::castBinary(llvm::Value* lhs, llvm::Val
     } else if (lhsType->isFloatTy() && rhsType->isIntegerTy()) {
         rhs = builder.CreateSIToFP(rhs, lhsType, "intToFloat");
     } else {
-        throw SemanticException("Type mismatch: cannot convert between incompatible types");
+        throw SemanticException("type mismatch: cannot convert between incompatible types");
     }
     return { lhs, rhs };
 }
@@ -1087,7 +1117,7 @@ void CodeGenVisitor::checkType(llvm::Value* value, const std::string& context) {
     // function: Check type before logical operator
     llvm::Type* type = value->getType();
     if (!((type->isIntegerTy() && type->getIntegerBitWidth() == 32) || type->isIntegerTy(1))) {
-        throw SemanticException("Type mismatch in \" + context + \": Logical operators can only be applied to Int or Boolean types");
+        throw SemanticException("type mismatch in \" + context + \": Logical operators can only be applied to Int or Boolean types");
     }
 }
 
@@ -1105,13 +1135,20 @@ void CodeGenVisitor::checkFunctionArgs(std::string func_name, llvm::Function* fu
         if (!expected_type->isPointerTy() && actual_type->isPointerTy()) {
             args[i] = loadIfPointer(args[i]);
             actual_type = args[i]->getType();
-        } else if (expected_type->isPointerTy() && actual_type->isPointerTy()) {
+        }
+
+        if (expected_type->isFloatTy() && actual_type->isIntegerTy()) {
+            args[i] = builder.CreateSIToFP(args[i], expected_type, "intToFloat");
+            actual_type = args[i]->getType();
+        }
+
+        if (expected_type->isPointerTy() && actual_type->isPointerTy()) {
             expected_type = cast<PointerType>(expected_type)->getPointerElementType();
             actual_type = cast<PointerType>(actual_type)->getPointerElementType();
         }
 
         if (expected_type != actual_type) {
-            throw SemanticException("Argument type mismatch for parameter " + std::to_string(i + 1) + " in function " + func_name + ".");
+            throw SemanticException("argument type mismatch for parameter " + std::to_string(i + 1) + " in function " + func_name + ".");
         }
     }
 }

@@ -1,7 +1,9 @@
 #include "Scope.h"
 
 void Scope::put(const std::string& name, llvm::Value* value) {
-    table[name] = value;
+    std::string transformed_name = name;
+    std::transform(transformed_name.begin(), transformed_name.end(), transformed_name.begin(), ::tolower);
+    table[transformed_name] = value;
 }
 
 void Scope::putArray(const llvm::Type* type, const std::vector<std::pair<int, int>>& array) {
@@ -13,11 +15,13 @@ void Scope::putRecord(const llvm::Type* type, const std::map<std::string, int>& 
 }
 
 llvm::Value* Scope::get(const std::string& name) {
-    if (table.find(name) != table.end()) {
-        return table[name];
+    std::string transformed_name = name;
+    std::transform(transformed_name.begin(), transformed_name.end(), transformed_name.begin(), ::tolower);
+    if (table.find(transformed_name) != table.end()) {
+        return table[transformed_name];
     }
     if (parent != nullptr) {
-        return parent->get(name);
+        return parent->get(transformed_name);
     }
     return 0;
 }

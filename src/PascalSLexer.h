@@ -12,17 +12,16 @@
 class  PascalSLexer : public antlr4::Lexer {
 public:
   enum {
-    T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, AND = 6, OR = 7, NOT = 8, 
-    INTEGER = 9, REAL = 10, BOOLEAN = 11, CHAR = 12, ARRAY = 13, BEGIN = 14, 
-    CASE = 15, CONST = 16, DIV = 17, DO = 18, DOWNTO = 19, ELSE = 20, END = 21, 
-    FALSE = 22, FOR = 23, FUNCTION = 24, IF = 25, MOD = 26, OF = 27, PROCEDURE = 28, 
-    PROGRAM = 29, RECORD = 30, REPEAT = 31, THEN = 32, TO = 33, TRUE = 34, 
-    TYPE = 35, UNTIL = 36, VAR = 37, WHILE = 38, CHARLITERAL = 39, ID = 40, 
-    LETTER = 41, NUM = 42, EXPONENT = 43, FRAC = 44, DIGITS = 45, DIGIT = 46, 
-    EQUAL = 47, PLUS = 48, MINUS = 49, MULT = 50, DIVIDE = 51, ASSIGNOP = 52, 
-    PERIODOP = 53, DOT = 54, COMMA = 55, COLON = 56, SEMICOLON = 57, QUOTE = 58, 
-    LPAREN = 59, RPAREN = 60, LBRACKET = 61, RBRACKET = 62, NEWLINE = 63, 
-    WS = 64
+    AND = 1, OR = 2, NOT = 3, INTEGER = 4, REAL = 5, BOOLEAN = 6, CHAR = 7, 
+    ARRAY = 8, BEGIN = 9, CASE = 10, CONST = 11, DIV = 12, DO = 13, DOWNTO = 14, 
+    ELSE = 15, END = 16, FALSE = 17, FOR = 18, FUNCTION = 19, IF = 20, MOD = 21, 
+    OF = 22, PROCEDURE = 23, PROGRAM = 24, RECORD = 25, REPEAT = 26, THEN = 27, 
+    TO = 28, TRUE = 29, TYPE = 30, UNTIL = 31, VAR = 32, WHILE = 33, CHARLITERAL = 34, 
+    ID = 35, LETTER = 36, NUM = 37, EXPONENT = 38, FRAC = 39, DIGITS = 40, 
+    DIGIT = 41, EQUAL = 42, NEQUAL = 43, LT = 44, LE = 45, GT = 46, GE = 47, 
+    PLUS = 48, MINUS = 49, MULT = 50, DIVIDE = 51, ASSIGNOP = 52, PERIODOP = 53, 
+    DOT = 54, COMMA = 55, COLON = 56, SEMICOLON = 57, QUOTE = 58, LPAREN = 59, 
+    RPAREN = 60, LBRACKET = 61, RBRACKET = 62, NEWLINE = 63, WS = 64
   };
 
   explicit PascalSLexer(antlr4::CharStream *input);
