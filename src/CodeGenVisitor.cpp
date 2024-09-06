@@ -954,6 +954,17 @@ antlrcpp::Any CodeGenVisitor::visitAssignmentStatement(PascalSParser::Assignment
             "Failed to evaluate expression '" + ctx->expression()->getText() + "'");
     }
 
+    Type* varType = cast<PointerType>(var->getType())->getPointerElementType();
+
+    if (varType != expr->getType()) {
+        if (varType->isFloatTy() && expr->getType()->isIntegerTy()) {
+            expr = builder.CreateSIToFP(expr, varType, "intToFloat");
+        } else {
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "Type mismatch: cannot assign " + ctx->expression()->getText() + " to " + ctx->variable()->getText());
+        }
+    }
+
     return builder.CreateStore(expr, var);
 }
 
@@ -1024,6 +1035,7 @@ Value* CodeGenVisitor::getArrayElement(Value* array, std::vector<Value*> index) 
     }
 
     std::vector<Value*> offsetted_indices;
+    offsetted_indices.push_back(ConstantInt::get(context, APInt(32, 0)));
     for (int i = 0; i < array_info.size(); i++) {
         Value* start = ConstantInt::get(context, APInt(32, array_info[i].first));
         index[i] = loadIfPointer(index[i]);
