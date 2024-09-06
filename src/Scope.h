@@ -20,6 +20,8 @@ public:
     std::vector<std::pair<int, int>> getArray(const llvm::Type* type);
     std::map<std::string, int> getRecord(const llvm::Type* type);
 
+    bool declared(const std::string& name);
+
 private:
     std::map<std::string, llvm::Value*> table;
     std::map<const llvm::Type*, std::vector<std::pair<int, int>>> array_table;

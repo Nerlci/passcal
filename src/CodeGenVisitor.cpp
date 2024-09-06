@@ -132,7 +132,7 @@ antlrcpp::Any CodeGenVisitor::visitVarDeclarations(PascalSParser::VarDeclaration
         auto var_declarations = std::any_cast<std::map<std::string, llvm::Type*>>(visit(ctx->varDeclaration()));
 
         for (const auto& var_declaration : var_declarations) {
-            if (scope->get(var_declaration.first) || subprogram_scope->get(var_declaration.first)) {
+            if (scope->declared(var_declaration.first) || subprogram_scope->declared(var_declaration.first)) {
                 throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
                     "identifier '" + var_declaration.first + "' was already declared in this scope");
             }
@@ -313,9 +313,11 @@ antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementConte
 
     // Get the initial value
     Value* initValue = std::any_cast<llvm::Value*>(visit(ctx->expression(0)));
+    initValue = loadIfPointer(initValue);
 
     // Get the final value
     Value* finalValue = std::any_cast<llvm::Value*>(visit(ctx->expression(1)));
+    finalValue = loadIfPointer(finalValue);
 
     // Determine if it's counting up or down
     bool countUp = ctx->updown()->DOWNTO() == nullptr;
@@ -532,7 +534,7 @@ antlrcpp::Any CodeGenVisitor::visitBranchList(PascalSParser::BranchListContext* 
 
 antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::SubprogramDeclarationContext* ctx) {
     std::string subprogram_name = ctx->subprogramHead()->ID()->getText();
-    if (scope->get(subprogram_name) || subprogram_scope->get(subprogram_name)) {
+    if (scope->declared(subprogram_name) || subprogram_scope->declared(subprogram_name)) {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
             "identifier '" + subprogram_name + "' was already declared in this scope");
     }
@@ -561,7 +563,7 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramDeclaration(PascalSParser::Subprogr
 
 // @return llvm::Function*
 antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadContext* ctx) {
-    std::string sub_program_name = ctx->ID()->getText();
+    std::string subprogram_name = ctx->ID()->getText();
 
     llvm::Type* return_type = nullptr;
     llvm::Value* return_value = nullptr;
@@ -601,16 +603,16 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
         }
     }
 
-    llvm::FunctionType* sub_program_type = llvm::FunctionType::get(return_type, param_types, false);
-    llvm::Function* sub_program = llvm::Function::Create(sub_program_type, llvm::Function::ExternalLinkage, sub_program_name, module.get());
-    llvm::BasicBlock* sub_program_entry = llvm::BasicBlock::Create(context, sub_program_name + "Entry", sub_program);
+    llvm::FunctionType* subprogram_type = llvm::FunctionType::get(return_type, param_types, false);
+    llvm::Function* subprogram = llvm::Function::Create(subprogram_type, llvm::Function::ExternalLinkage, subprogram_name, module.get());
+    llvm::BasicBlock* subprogram_entry = llvm::BasicBlock::Create(context, subprogram_name + "Entry", subprogram);
 
     current_return_value = return_value;
-    builder.SetInsertPoint(sub_program_entry);
+    builder.SetInsertPoint(subprogram_entry);
 
     // Add parameters to scope
     int idx = 0;
-    for (auto& arg : sub_program->args()) {
+    for (auto& arg : subprogram->args()) {
         arg.setName(param_lists[idx].name);
 
         if (param_lists[idx].is_var) {
@@ -625,12 +627,12 @@ antlrcpp::Any CodeGenVisitor::visitSubprogramHead(PascalSParser::SubprogramHeadC
     }
 
     if (ctx->FUNCTION()) {
-        return_value = builder.CreateAlloca(return_type, nullptr, sub_program_name + "_return_value");
-        scope->put(sub_program_name, return_value);
+        return_value = builder.CreateAlloca(return_type, nullptr, subprogram_name + "_return_value");
+        scope->put(subprogram_name, return_value);
         current_return_value = return_value;
     }
 
-    return sub_program;
+    return subprogram;
 }
 
 antlrcpp::Any CodeGenVisitor::visitParameterLists(PascalSParser::ParameterListsContext* ctx) {
@@ -891,6 +893,7 @@ antlrcpp::Any CodeGenVisitor::visitSimpleExpression(PascalSParser::SimpleExpress
     Value* value = nullptr;
     if (ctx->PLUS() || ctx->MINUS()) {
         Value* term_value = std::any_cast<llvm::Value*>(visit(ctx->term()));
+        term_value = loadIfPointer(term_value);
         if (ctx->PLUS()) {
             value = term_value;
         } else if (ctx->MINUS()) {
