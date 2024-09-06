@@ -39,6 +39,7 @@ std::string StandardProcedure::getFormatString(llvm::Type* type) {
 }
 
 bool StandardProcedure::hasProcedure(std::string name) {
+    std::transform(name.begin(), name.end(), name.begin(), ::tolower);
     return prototypeMap.find(name) != prototypeMap.end();
 }
 
