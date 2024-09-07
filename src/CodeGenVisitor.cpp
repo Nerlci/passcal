@@ -948,6 +948,11 @@ antlrcpp::Any CodeGenVisitor::visitVariable(PascalSParser::VariableContext* ctx)
     std::string var_name = ctx->ID()->getText();
     llvm::Value* value = scope->get(var_name);
 
+    if (value == nullptr) {
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "identifier '" + var_name + "' was not declared in this scope");
+    }
+
     // Retrieve the IdVarpartsContext
     PascalSParser::IdVarpartsContext* id_varparts_ctx = ctx->idVarparts();
 
