@@ -269,6 +269,12 @@ antlrcpp::Any CodeGenVisitor::visitIfStatement(PascalSParser::IfStatementContext
     llvm::Value* condition = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     condition = loadIfPointer(condition);
 
+    // 类型检查
+    if(!condition->getType()->isIntegerTy(1)) {
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "if statement condition must be of type boolean");
+    }
+
     // 创建基本块：then和else
     llvm::Function* parentFunction = builder.GetInsertBlock()->getParent();
     llvm::BasicBlock* thenBB = llvm::BasicBlock::Create(context, "then", parentFunction);
@@ -311,53 +317,48 @@ antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementConte
     // 循环变量
     std::string loopVar = ctx->ID()->getText();
 
-    // Get the initial value
+    // 初始值
     Value* initValue = std::any_cast<llvm::Value*>(visit(ctx->expression(0)));
     initValue = loadIfPointer(initValue);
 
-    // Get the final value
+    // 终值
     Value* finalValue = std::any_cast<llvm::Value*>(visit(ctx->expression(1)));
     finalValue = loadIfPointer(finalValue);
 
-    // Determine if it's counting up or down
+    // 类型检查
+    if (initValue->getType()->isIntegerTy(32) && finalValue->getType()->isIntegerTy(32)) {
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "for loop variable must be of type integer");
+    }
+
     bool countUp = ctx->updown()->DOWNTO() == nullptr;
 
-    // Create basic blocks
     Function* function = builder.GetInsertBlock()->getParent();
     BasicBlock* preheaderBB = builder.GetInsertBlock();
     BasicBlock* loopBB = BasicBlock::Create(context, "loop", function);
     BasicBlock* afterBB = BasicBlock::Create(context, "afterloop", function);
 
-    // Store the initial value in the loop variable
     Value* variable = scope->get(loopVar);
     if (!variable) {
-        // If the variable doesn't exist, create an alloca for it
         variable = builder.CreateAlloca(builder.getInt32Ty(), nullptr, loopVar);
         scope->put(loopVar, variable);
     }
     builder.CreateStore(initValue, variable);
 
-    // Jump to the loop body
     builder.CreateBr(loopBB);
 
-    // Start insertion in loop block
     builder.SetInsertPoint(loopBB);
 
-    // Generate the loop body
     visit(ctx->statement());
 
-    // Increment or decrement the loop variable
     Value* currentVar = builder.CreateLoad(builder.getInt32Ty(), variable, loopVar);
     Value* nextVar = countUp ? builder.CreateAdd(currentVar, ConstantInt::get(context, APInt(32, 1)), "nextvar") : builder.CreateSub(currentVar, ConstantInt::get(context, APInt(32, 1)), "nextvar");
     builder.CreateStore(nextVar, variable);
 
-    // Compute the end condition
     Value* endCond = countUp ? builder.CreateICmpSLE(nextVar, finalValue, "loopcond") : builder.CreateICmpSGE(nextVar, finalValue, "loopcond");
 
-    // Create the "after loop" block and insert it
     builder.CreateCondBr(endCond, loopBB, afterBB);
 
-    // Any new code will be inserted in afterBB
     builder.SetInsertPoint(afterBB);
 
     return nullptr;
@@ -378,6 +379,13 @@ antlrcpp::Any CodeGenVisitor::visitWhileStatement(PascalSParser::WhileStatementC
     // 访问条件表达式
     Value* condition = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     condition = loadIfPointer(condition);
+
+    // 类型检查
+    if(!condition->getType()->isIntegerTy(1)){
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "while statement condition must be of type boolean");
+    }
+
     // 创建条件跳转
     builder.CreateCondBr(condition, loopBB, afterBB);
 
@@ -402,30 +410,27 @@ antlrcpp::Any CodeGenVisitor::visitRepeatStatement(PascalSParser::RepeatStatemen
     llvm::BasicBlock* conditionBB = llvm::BasicBlock::Create(context, "repeat_cond", function);
     llvm::BasicBlock* afterBB = llvm::BasicBlock::Create(context, "repeat_end", function);
 
-    // Branch to the loop body
     builder.CreateBr(loopBB);
 
-    // Start insertion in loop block
     builder.SetInsertPoint(loopBB);
 
     // 遍历statementList
     visit(ctx->statementList());
 
-    // Branch to the condition block
     builder.CreateBr(conditionBB);
 
-    // Start insertion in condition block
     builder.SetInsertPoint(conditionBB);
 
-    // Generate code for the condition
     Value* conditionValue = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     conditionValue = loadIfPointer(conditionValue);
 
-    // Create conditional branch
-    // If condition is false (0), continue looping. If true (1), exit the loop.
+    if(!conditionValue->getType()->isIntegerTy(1)){
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "repeat statement condition must be of type boolean");
+    }
+
     builder.CreateCondBr(conditionValue, afterBB, loopBB);
 
-    // Any new code will be inserted in afterBB
     builder.SetInsertPoint(afterBB);
 
     return nullptr;
@@ -449,6 +454,12 @@ antlrcpp::Any CodeGenVisitor::visitCaseStatement(PascalSParser::CaseStatementCon
     // 访问 case 的表达式，获取其值
     Value* caseValue = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     caseValue = loadIfPointer(caseValue);
+
+    // 类型检查
+    if(caseValue->getType()->isFloatTy()){
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "case statement expression can not be of type real");
+    }
 
     // 开始switch语句
     builder.CreateBr(switchBB);
@@ -502,6 +513,14 @@ antlrcpp::Any CodeGenVisitor::visitConstList(PascalSParser::ConstListContext* ct
 antlrcpp::Any CodeGenVisitor::visitBranch(PascalSParser::BranchContext* ctx) {
     // 访问 constList，得到该分支的所有常量
     std::vector<llvm::Value*> constValues = std::any_cast<std::vector<llvm::Value*>>(visit(ctx->constList()));
+
+    // 类型检查
+    for(auto value : constValues){
+        if(value->getType()->isFloatTy()){
+            throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+                "case statement expression can not be of type real");
+        }
+    }
 
     // 创建基本块，用于在匹配到合适的分支之后跳转到该分支执行代码
     Function* function = builder.GetInsertBlock()->getParent();
