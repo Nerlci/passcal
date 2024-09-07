@@ -15,12 +15,7 @@ while [[ "$#" -gt 0 ]]; do
   shift
 done
 
-if [ "$help_info" = true ]; then
-  ./passcal --help
-  exit 0
-fi
-
-if [ "$run_preprocess_only" = true ]; then
+if [ "$run_preprocess_only" = true ] || [ "$help_info" = true ]; then 
   ./passcal "${original_args[@]}"
 else
   if [ -z "$output_file" ]; then
