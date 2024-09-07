@@ -13,7 +13,7 @@ CONFIG_FILE := build/cfg/buildtype
 
 # Default mode
 ifeq ("$(wildcard $(CONFIG_FILE))","")
-	MODE := release-static
+	MODE := release-dynamic
 else
 	MODE := $(shell cat $(CONFIG_FILE))
 endif
