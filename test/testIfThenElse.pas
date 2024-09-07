@@ -7,6 +7,6 @@ begin
     else testfun:=1;
 end;
 begin
-    b := 10;
+    read(b);
     writeln(testfun(b));
 end.
