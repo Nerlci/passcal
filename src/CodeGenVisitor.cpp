@@ -275,7 +275,7 @@ antlrcpp::Any CodeGenVisitor::visitIfStatement(PascalSParser::IfStatementContext
     condition = loadIfPointer(condition);
 
     // 类型检查
-    if(!condition->getType()->isIntegerTy(1)) {
+    if (!condition->getType()->isIntegerTy(1)) {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
             "if statement condition must be of type boolean");
     }
@@ -331,7 +331,7 @@ antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementConte
     finalValue = loadIfPointer(finalValue);
 
     // 类型检查
-    if (initValue->getType()->isIntegerTy(32) && finalValue->getType()->isIntegerTy(32)) {
+    if (!initValue->getType()->isIntegerTy(32) || !finalValue->getType()->isIntegerTy(32)) {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
             "for loop variable must be of type integer");
     }
@@ -345,9 +345,15 @@ antlrcpp::Any CodeGenVisitor::visitForStatement(PascalSParser::ForStatementConte
 
     Value* variable = scope->get(loopVar);
     if (!variable) {
-        variable = builder.CreateAlloca(builder.getInt32Ty(), nullptr, loopVar);
-        scope->put(loopVar, variable);
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "variable '" + loopVar + "' was not declared in this scope");
     }
+
+    if (!((AllocaInst*)variable)->getAllocatedType()->isIntegerTy(32)) {
+        throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
+            "for loop variable must be of type integer");
+    }
+
     builder.CreateStore(initValue, variable);
 
     builder.CreateBr(loopBB);
@@ -386,7 +392,7 @@ antlrcpp::Any CodeGenVisitor::visitWhileStatement(PascalSParser::WhileStatementC
     condition = loadIfPointer(condition);
 
     // 类型检查
-    if(!condition->getType()->isIntegerTy(1)){
+    if (!condition->getType()->isIntegerTy(1)) {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
             "while statement condition must be of type boolean");
     }
@@ -429,7 +435,7 @@ antlrcpp::Any CodeGenVisitor::visitRepeatStatement(PascalSParser::RepeatStatemen
     Value* conditionValue = std::any_cast<llvm::Value*>(visit(ctx->expression()));
     conditionValue = loadIfPointer(conditionValue);
 
-    if(!conditionValue->getType()->isIntegerTy(1)){
+    if (!conditionValue->getType()->isIntegerTy(1)) {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
             "repeat statement condition must be of type boolean");
     }
@@ -461,7 +467,7 @@ antlrcpp::Any CodeGenVisitor::visitCaseStatement(PascalSParser::CaseStatementCon
     caseValue = loadIfPointer(caseValue);
 
     // 类型检查
-    if(caseValue->getType()->isFloatTy()){
+    if (caseValue->getType()->isFloatTy()) {
         throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
             "case statement expression can not be of type real");
     }
@@ -520,8 +526,8 @@ antlrcpp::Any CodeGenVisitor::visitBranch(PascalSParser::BranchContext* ctx) {
     std::vector<llvm::Value*> constValues = std::any_cast<std::vector<llvm::Value*>>(visit(ctx->constList()));
 
     // 类型检查
-    for(auto value : constValues){
-        if(value->getType()->isFloatTy()){
+    for (auto value : constValues) {
+        if (value->getType()->isFloatTy()) {
             throw SemanticException(filename, ctx->getStart()->getLine(), ctx->getStart()->getCharPositionInLine(),
                 "case statement expression can not be of type real");
         }
