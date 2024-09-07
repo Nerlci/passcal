@@ -2,33 +2,40 @@ program chess(input,output);
 var
   i,j,n,k,a,b,max,min,maxp:integer;
   c:array[1..250] of integer;
-function aorb(a,b:integer):boolean;
-  begin
-    if a>b then aorb:=true
-      else aorb:=false;
-  end;
 function abs(a:integer):integer;
   begin
     if a<0 then abs:=-a
       else abs:=a;
   end;
+procedure inc(var a:integer);
+  begin
+    a:=a+1;
+  end;
+procedure dec(var a:integer);
+  begin
+    a:=a-1;
+  end;
+function aorb(a,b:integer):boolean;
+  begin
+    if a>b then aorb:=true
+      else aorb:=false;
+  end;
 procedure qsort(l,r:integer);
   var
     i,j,mid,t:integer;
-    c:array[1..250] of integer;
   begin
     i:=l; j:=r;
     mid:=c[(l+r) div 2];
     repeat
-      while c[i]>mid do i:=i+1;
-      while c[j]<mid do j:=j-1;
+      while c[i]>mid do inc(i);
+      while c[j]<mid do dec(j);
       if i<=j then
         begin
           t:=c[i];
           c[i]:=c[j];
           c[j]:=t;
-          i:=i+1;
-          j:=j-1;
+          inc(i);
+          dec(j);
         end;
     until i>j;
     if i<r then qsort(i,r);
@@ -37,7 +44,6 @@ procedure qsort(l,r:integer);
 procedure ld;
   var
     x,y:integer;
-    a,b,max,min:integer;
   begin
   if abs(a-max)>abs(a-min) then x:=abs(a-min)
     else x:=abs(a+1-max);
@@ -46,8 +52,7 @@ procedure ld;
   end;
 procedure zj;
   var
-    i,n,ans:integer;
-    c:array[1..250] of integer;
+    i,ans:integer;
   begin
     ans:=0;
     for i:=1 to n do
