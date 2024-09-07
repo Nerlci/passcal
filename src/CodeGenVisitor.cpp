@@ -38,6 +38,11 @@ antlrcpp::Any CodeGenVisitor::visitProgramHead(PascalSParser::ProgramHeadContext
 
     builder.SetInsertPoint(main_entry);
 
+    auto identifier_list = std::any_cast<std::vector<std::string>>(visit(ctx->identifierList()));
+    for (const auto& identifier : identifier_list) {
+        scope->put(identifier, nullptr);
+    }
+
     return visitChildren(ctx);
 }
 
